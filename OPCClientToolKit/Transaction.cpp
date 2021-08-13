@@ -2,13 +2,13 @@
 
 
 CTransaction::CTransaction(ITransactionComplete * completeCB)
-:completed(FALSE), cancelID(0xffffffff), completeCallBack(completeCB){
+:_completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB){
 }
 
 
 
 CTransaction::CTransaction(std::vector<COPCItem *>&items, ITransactionComplete * completeCB)
-:completed(FALSE), cancelID(0xffffffff), completeCallBack(completeCB){
+:_completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB){
 	for (unsigned i = 0; i < items.size(); i++){
 		opcData.SetAt(items[i],NULL);
 	}
@@ -36,7 +36,7 @@ const OPCItemData * CTransaction::getItemValue(COPCItem *item) const{
 }
 
 void CTransaction::setCompleted(){
-	completed = TRUE;
+	_completed = TRUE;
 	if (completeCallBack){
 		completeCallBack->complete(*this);
 	}

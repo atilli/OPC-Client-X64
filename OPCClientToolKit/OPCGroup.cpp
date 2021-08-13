@@ -23,7 +23,7 @@ Boston, MA  02111-1307, USA.
 #include "OPCItem.h"
 
 
-std::map<DWORD, uintptr_t> transactionPointers;
+std::map<DWORD, std::shared_ptr<CTransaction>> transactionPointers;
 
 
 /**
@@ -101,9 +101,13 @@ public:
 
 		if (Transid != 0){
 			// it is a result of a refresh (see p106 of spec)
-			CTransaction& trans = *(CTransaction*)transactionPointers[Transid];
-			updateOPCData(trans.opcData, count, clienthandles, values,quality,time,errors);
-			trans.setCompleted();	
+			std::shared_ptr<CTransaction> pTrans = transactionPointers[Transid];
+			updateOPCData(pTrans->opcData, count, clienthandles, values,quality,time,errors);
+			
+			pTrans->setCompleted();
+
+			transactionPointers.erase(Transid);
+			
 			return S_OK;	
 		}
 
@@ -121,9 +125,10 @@ public:
 		OPCHANDLE * clienthandles, VARIANT* values, WORD * quality,
 		FILETIME * time, HRESULT * errors)
 	{
-		CTransaction& trans = *(CTransaction*)transactionPointers[Transid];
-		updateOPCData(trans.opcData, count, clienthandles, values,quality,time,errors);
-		trans.setCompleted();
+		std::shared_ptr<CTransaction> pTrans = transactionPointers[Transid];
+
+		updateOPCData(pTrans->opcData, count, clienthandles, values,quality,time,errors);
+		pTrans->setCompleted();
 		return S_OK;
 	}
 
@@ -131,16 +136,18 @@ public:
 	STDMETHODIMP OnWriteComplete(DWORD Transid, OPCHANDLE grphandle, HRESULT mastererr, 
 		DWORD count, OPCHANDLE * clienthandles, HRESULT * errors)
 	{
-		CTransaction& trans = *(CTransaction*)transactionPointers[Transid];
+		std::shared_ptr<CTransaction> pTrans = transactionPointers[Transid];
 
 		// see page 145 - number of items returned may be less than sent
 		for (unsigned i = 0; i < count; i++){
 			// TODO this is bad  - server could corrupt address - need to use look up table
 			COPCItem * item = (COPCItem *)clienthandles[i];
-			trans.setItemError(item, errors[i]); // this records error state - may be good
+			pTrans->setItemError(item, errors[i]); // this records error state - may be good
 		}
 
-		trans.setCompleted();
+		pTrans->setCompleted();
+		transactionPointers.erase(Transid);
+
 		return S_OK;
 	}
 
@@ -279,52 +286,56 @@ void COPCGroup::readSync(std::vector<COPCItem *>& items, COPCItem_DataMap & opcD
 
 
 
-CTransaction * COPCGroup::readAsync(std::vector<COPCItem *>& items, ITransactionComplete *transactionCB){
+std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<COPCItem *>& items, ITransactionComplete *transactionCB){
 		DWORD cancelID;
 		HRESULT * individualResults;
-		CTransaction * trans = new CTransaction(items,transactionCB);
+		std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(items,transactionCB);
 		OPCHANDLE *serverHandles = buildServerHandleList(items);
 		DWORD noItems = (DWORD)items.size();
-		transactionPointers[(DWORD)trans] = (uintptr_t)trans;
+		DWORD transactionID = pTrans->CreateTransactionID();
 
-		HRESULT result = iAsych2IO->Read(noItems, serverHandles, (DWORD)trans, &cancelID, &individualResults);
+		transactionPointers[transactionID] = pTrans;
+
+		HRESULT result = iAsych2IO->Read(noItems, serverHandles, transactionID, &cancelID, &individualResults);
 		delete [] serverHandles;
 		if (FAILED(result)){
-			delete trans;
+			//delete trans;
 			throw OPCException("Asynch Read failed");
 		}
 
-		trans->setCancelId(cancelID);
+		pTrans->setCancelId(cancelID);
 		unsigned failCount = 0;
 		for (unsigned i = 0;i < noItems; i++){
 			if (FAILED(individualResults[i])){
-				trans->setItemError(items[i],individualResults[i]);
+				pTrans->setItemError(items[i],individualResults[i]);
 				failCount++;
 			}
 		}
 		if (failCount == items.size()){
-			trans->setCompleted(); // if all items return error then no callback will occur. p 101
+			pTrans->setCompleted(); // if all items return error then no callback will occur. p 101
 		}
 		
 
 		COPCClient::comFree(individualResults);
-		return trans;
+		return pTrans;
 }
 
 
 
-CTransaction * COPCGroup::refresh(OPCDATASOURCE source, ITransactionComplete *transactionCB){
+std::shared_ptr<CTransaction> COPCGroup::refresh(OPCDATASOURCE source, ITransactionComplete *transactionCB){
 	DWORD cancelID;
-	CTransaction * trans = new CTransaction(items, transactionCB);
-	transactionPointers[(DWORD)trans] = (uintptr_t)trans;
+	std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(items, transactionCB);
 
-	HRESULT result = iAsych2IO->Refresh2(source, (DWORD)trans, &cancelID);
+	DWORD transactionID = pTrans->CreateTransactionID();
+
+	HRESULT result = iAsych2IO->Refresh2(source, transactionID, &cancelID);
 	if (FAILED(result)){
-		delete trans;
+		//delete trans;
 		throw OPCException("refresh failed");
 	}
+	transactionPointers[transactionID] = pTrans;
 
-	return trans;
+	return pTrans;
 }
 
 

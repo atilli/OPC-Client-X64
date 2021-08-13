@@ -124,7 +124,7 @@ CLSID CRemoteHost::GetCLSIDFromRemoteRegistry(const std::string& hostName, const
 }
 
 
-COPCServer* CRemoteHost::connectDAServer(const std::string& serverProgIDOrClsID)
+std::unique_ptr<COPCServer> CRemoteHost::connectDAServer(const std::string& serverProgIDOrClsID)
 {
 	const char* serverAppStr = serverProgIDOrClsID.c_str();
 
@@ -146,7 +146,7 @@ COPCServer* CRemoteHost::connectDAServer(const std::string& serverProgIDOrClsID)
 	return connectDAServer(clsid);
 }
 
-COPCServer* CRemoteHost::connectDAServer(const CLSID& serverClassID)
+std::unique_ptr<COPCServer> CRemoteHost::connectDAServer(const CLSID& serverClassID)
 {
 	ATL::CComPtr<IUnknown> iUnknown;
 	makeRemoteObject(serverClassID, IID_IUnknown, (void **)&iUnknown);
@@ -158,7 +158,7 @@ COPCServer* CRemoteHost::connectDAServer(const CLSID& serverClassID)
 		throw OPCException("Failed obtain IID_IOPCServer interface from server");
 	}
 
-	return new COPCServer(iOpcServer);
+	return std::make_unique<COPCServer>(iOpcServer);
 }
 
 
@@ -239,7 +239,7 @@ CLocalHost::CLocalHost()
 }
 
 
-COPCServer* CLocalHost::connectDAServer(const std::string& serverProgID)
+std::unique_ptr<COPCServer> CLocalHost::connectDAServer(const std::string& serverProgID)
 {
 	USES_CONVERSION;
 	WCHAR* wideName = T2OLE(serverProgID.c_str());
@@ -273,11 +273,11 @@ COPCServer* CLocalHost::connectDAServer(const std::string& serverProgID)
 		throw OPCException("Failed obtain IID_IOPCServer interface from server");
 	}
 
-	return new COPCServer(iOpcServer);
+	return std::make_unique<COPCServer>(iOpcServer);
 }
 
 
-COPCServer* CLocalHost::connectDAServer(const CLSID& clsid)
+std::unique_ptr<COPCServer> CLocalHost::connectDAServer(const CLSID& clsid)
 {
 	ATL::CComPtr<IClassFactory> iClassFactory;
 	HRESULT result = CoGetClassObject(clsid, CLSCTX_LOCAL_SERVER, NULL, IID_IClassFactory, (void**)&iClassFactory);
@@ -300,8 +300,7 @@ COPCServer* CLocalHost::connectDAServer(const CLSID& clsid)
 	{
 		throw OPCException("Failed obtain IID_IOPCServer interface from server");
 	}
-
-	return new COPCServer(iOpcServer);
+	return std::make_unique<COPCServer>(iOpcServer);
 }
 
 void CLocalHost::getListOfDAServers(CATID cid, std::vector<std::string>& listOfProgIDs)

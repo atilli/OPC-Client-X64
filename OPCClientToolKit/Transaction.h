@@ -34,10 +34,11 @@ class CTransaction{
 	ITransactionComplete * completeCallBack;
 
 	// true when the transaction has completed
-	bool completed;
+	bool _completed;
 	
 
-	DWORD cancelID;
+	DWORD _cancelID;
+	DWORD _transactionID;
 
 
 public:
@@ -75,14 +76,18 @@ public:
 	void setCompleted();
 
 	bool isCompeleted() const{
-		return completed;
+		return _completed;
 	}
 
 	void setCancelId(DWORD id){
-		cancelID = id;
+		_cancelID = id;
 	}
 
 	DWORD getCancelId() const{
-		return cancelID;
+		return _cancelID;
+	}
+	DWORD CreateTransactionID() {
+		_transactionID = (DWORD)(uintptr_t)this;
+		return _transactionID;
 	}
 };

@@ -151,7 +151,7 @@ public:
 	/**
 	* Read a defined group of OPC item asynchronously
 	*/
-	CTransaction * readAsync(std::vector<COPCItem *>& items, ITransactionComplete *transactionCB = NULL);
+	std::shared_ptr<CTransaction> readAsync(std::vector<COPCItem *>& items, ITransactionComplete *transactionCB = NULL);
 
 
 	/**
@@ -160,7 +160,7 @@ public:
 	* Transaction object is owned by caller.
 	* If group asynch is disabled then this call will not work
 	*/ 
-	CTransaction * refresh(OPCDATASOURCE source, ITransactionComplete *transactionCB = NULL);
+	std::shared_ptr<CTransaction> refresh(OPCDATASOURCE source, ITransactionComplete *transactionCB = NULL);
 
 
 

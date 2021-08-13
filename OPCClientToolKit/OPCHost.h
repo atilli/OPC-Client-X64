@@ -50,9 +50,9 @@ public:
 	/**
 	* Connect to OPC Data Access server on this host
 	*/
-	virtual COPCServer* connectDAServer(const std::string & serverProgID) = 0;
+	virtual std::unique_ptr<COPCServer> connectDAServer(const std::string & serverProgID) = 0;
 
-	virtual COPCServer* connectDAServer(const CLSID& clsid) = 0;
+	virtual std::unique_ptr<COPCServer> connectDAServer(const CLSID& clsid) = 0;
 };
 
 
@@ -93,13 +93,13 @@ public:
 	* Make opc server from progID
 	* @returns COPCServer owned by caller
 	*/
-	COPCServer * connectDAServer(const std::string & serverProgID);
+	std::unique_ptr<COPCServer> connectDAServer(const std::string & serverProgID) override;
 
 	/**
 	* Make opc server from classID
 	* @returns COPCServer owned by caller
 	*/
-	COPCServer * connectDAServer(const CLSID & serverClassID);
+	std::unique_ptr<COPCServer> connectDAServer(const CLSID & serverClassID) override;
 };
 
 
@@ -124,13 +124,13 @@ public:
 	* Make opc server from progID
 	* @returns COPCServer owned by caller
 	*/
-	COPCServer * connectDAServer(const std::string & serverProgID);
+	std::unique_ptr<COPCServer> connectDAServer(const std::string & serverProgID) override;
 
 	/**
 	* Make opc server from CLSID
 	* @returns COPCServer owned by caller
 	*/
-	COPCServer* connectDAServer(const CLSID& clsid);
+	std::unique_ptr<COPCServer> connectDAServer(const CLSID& clsid) override;
 };
 
 #endif // !defined(AFX_OPCHOST_H__D8F307D8_4412_4FE7_93AE_E101F5366817__INCLUDED_)

@@ -138,10 +138,10 @@ void main(void)
 	scanf("%d",&server_id);
 	std::string serverName = localServerList[server_id];
 
-	COPCServer* opcServer = nullptr;
+	std::unique_ptr<COPCServer> pOpcServer;
 
 	try {
-		opcServer = pHost->connectDAServer(serverName);
+		pOpcServer = pHost->connectDAServer(serverName);
 	}
 	catch (const OPCException& ex) {
 		std::cerr << ex.reasonString();
@@ -149,20 +149,26 @@ void main(void)
 	}
 	// Check status
 	ServerStatus status;
-	opcServer->getStatus(status);
+	pOpcServer->getStatus(status);
 	std::cout << "Server(" << status.vendorInfo << ") state is " << status.dwServerState << std::endl;
 
 	// browse server
 	std::vector<std::string> opcItemNames;
-	opcServer->getItemNames(opcItemNames);
-	std::cout << "Got "<< opcItemNames.size() << " names";
+	std::vector<std::string> increments;
+
+	pOpcServer->getItemNames(opcItemNames);
+	std::cout << "Got "<< opcItemNames.size() << " names" << std::endl;
 	for (auto &name : opcItemNames){
 		std::cout << name << std::endl;
+		if (name.find("increment") != std::string::npos) {
+			// Skip arrays for now 
+			if (name.find("array") == std::string::npos) increments.push_back(name);
+		}
 	}
 
 	// make group
 	unsigned long refreshRate;
-	COPCGroup *group = opcServer->makeGroup("Group",true,1000,refreshRate,0.0);
+	COPCGroup *group = pOpcServer->makeGroup("Group",true,1000,refreshRate,0.0);
 	std::vector<COPCItem *> items;
 
 	// make  a single item
@@ -173,17 +179,18 @@ void main(void)
 	std::vector<std::string> itemNames;
 	std::vector<COPCItem *>itemsCreated;
 	std::vector<HRESULT> errors;
+	//for(auto incTag : increments) 
+	//itemNames.push_back(opcItemNames[15]);
+	//itemNames.push_back(opcItemNames[16]);	
 
-	itemNames.push_back(opcItemNames[15]);
-	itemNames.push_back(opcItemNames[16]);	
-	if (group->addItems(itemNames, itemsCreated,errors,true) != 0){
-		printf("Item create failed\n");
+	if (group->addItems(increments, itemsCreated,errors,true) != 0){
+		std::cout << "Item create failed" << std::endl;
 	}
 
 	// get properties
 	std::vector<CPropertyDescription> propDesc;
 	readWritableItem->getSupportedProperties(propDesc);
-	printf("Supported properties for %s\n", readWritableItem->getName().c_str());
+	std::cout << "Supported properties for " << readWritableItem->getName() << std::endl;
 	for (i = 0; i < propDesc.size(); i++){
 		printf("%d id = %u, description = %s, type = %d\n", i, propDesc[i].id,propDesc[i].desc.c_str(),propDesc[i].type);
 	}
@@ -222,21 +229,18 @@ void main(void)
 	// ASYNCH OPC item READ
 	CTransComplete complete;
 	complete.setCompletionMessage("*******Asynch read completion handler has been invoked (OPC item)");
-	CTransaction* t = readWritableItem->readAsynch(&complete);
+	std::shared_ptr<CTransaction> t = readWritableItem->readAsynch(&complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 	
 	const OPCItemData * asychData = t->getItemValue(readWritableItem); // not owned
 	if (!FAILED(asychData->error)){
 		printf("Asynch read quality %d value %d\n", asychData->wQuality, asychData->vDataValue.iVal);
 	}
-	delete t;
-
-	// Aysnch read opc items from a group
+		// Aysnch read opc items from a group
 	complete.setCompletionMessage("*******Asynch read completion handler has been invoked (OPC GROUP)");
 	t = group->readAsync(itemsCreated, &complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
-	delete t;
-	
+		
 
 	// SYNCH write
 	VARIANT var;
@@ -258,8 +262,6 @@ void main(void)
 	}else{
 		printf("Asynch write failed\n");
 	}
-	delete t;
-	
 
 	// Group refresh (asynch operation) - pass results to CMyCallback as well
 	complete.setCompletionMessage("*******Refresh completion handler has been invoked");
@@ -273,8 +275,6 @@ void main(void)
 	}else{
 		printf("refresh failed\n");
 	}
-	delete t;
-
 
 	// just loop - changes to Items within a group are picked up here 
 	MESSAGEPUMPUNTIL(false)

@@ -65,13 +65,13 @@ public:
 	/**
 	* returned transaction object is owned
 	*/
-	CTransaction * readAsynch(ITransactionComplete *transactionCB = NULL);
+	std::shared_ptr<CTransaction> readAsynch(ITransactionComplete *transactionCB = NULL);
 
 
 	/**
 	* returned transaction object is owned
 	*/
-	CTransaction * writeAsynch(VARIANT &data, ITransactionComplete *transactionCB = NULL);
+	std::shared_ptr<CTransaction> writeAsynch(VARIANT &data, ITransactionComplete *transactionCB = NULL);
 
 	
 	DWORD getAccessRights() const{
