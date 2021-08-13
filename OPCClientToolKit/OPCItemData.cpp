@@ -21,7 +21,44 @@ OPCItemData::OPCItemData(FILETIME time, WORD qual, VARIANT & val, HRESULT err){
 	wQuality = qual;
 	error = err;
 }
+std::string OPCItemData::QualityString() {
+	
+	switch(wQuality)
+	{
+	case 192:
+	case 216:
+		return "GOOD";
+		break;
+	default:
+		return "BAD";
+		break;
+	}
+}
 
+std::string OPCItemData::ToString() {
+	
+	std::string ret = "?";
+	USES_CONVERSION;
+
+	switch (vDataValue.vt)
+	{
+	case VT_BSTR:
+		ret = W2A(vDataValue.bstrVal);
+		break;
+	case VT_UI8:
+		ret = std::to_string((std::uint64_t)vDataValue.llVal);
+	case VT_I8:
+		ret = std::to_string((std::int64_t)vDataValue.llVal);
+		break;
+	case VT_I4:
+		ret = std::to_string(vDataValue.lVal);
+		break;
+	case VT_I2:
+		ret = std::to_string(vDataValue.iVal);
+		break;			//more later
+	}
+	return ret;
+}
 
 OPCItemData::OPCItemData(){
 	vDataValue.vt = VT_EMPTY;

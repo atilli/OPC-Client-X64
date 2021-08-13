@@ -196,14 +196,15 @@ void CRemoteHost::getListOfDAServers(CATID cid, std::vector<std::string>& listOf
 			USES_CONVERSION;
 			COLE2T str(progID);
 
-			printf("ProgID: %s ", str);
+			/*printf("ProgID: %s ", str);
 
 			printf("CLSID: {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}\n",
 				glist.Data1, glist.Data2, glist.Data3,
 				glist.Data4[0], glist.Data4[1], glist.Data4[2], glist.Data4[3],
 				glist.Data4[4], glist.Data4[5], glist.Data4[6], glist.Data4[7]);
-
-			listOfProgIDs.push_back((char*)str);
+			*/
+			std::string strProdID = str;
+			listOfProgIDs.push_back(strProdID);
 			COPCClient::comFree(progID);
 			COPCClient::comFree(userType);
 		}

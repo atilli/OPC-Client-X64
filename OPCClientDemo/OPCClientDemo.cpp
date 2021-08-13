@@ -29,6 +29,8 @@ Boston, MA  02111-1307, USA.
 #include "OPCGroup.h"
 #include "OPCItem.h"
 #include <sys\timeb.h>
+#include <iostream>
+#include <string>
 
 
 
@@ -42,7 +44,7 @@ Boston, MA  02111-1307, USA.
 * 6) synch and asynch write of OPC item.
 * 7) The receipt of changes to items within a group (subscribe)
 * 8) group refresh.
-* 9) Synch read of multiple OPC items.
+* 9) Synch read of multiple OPC items. 
 */
 
 
@@ -51,12 +53,21 @@ Boston, MA  02111-1307, USA.
 */
 class CMyCallback:public IAsynchDataCallback{
 	public:
-		void OnDataChange(COPCGroup & group, CAtlMap<COPCItem *, OPCItemData *> & changes){
+		void OnDataChange(COPCGroup & group, CAtlMap<COPCItem *, OPCItemData *> & changes) override {
 			printf("Group %s, item changes\n", group.getName().c_str());
 			POSITION pos = changes.GetStartPosition();
 			while (pos != NULL){
-				COPCItem * item = changes.GetNextKey(pos);
-				printf("-----> %s\n", item->getName().c_str());
+
+				auto kv = changes.GetNext(pos);
+				COPCItem* pItem = kv->m_key;
+				OPCItemData *pVal = kv->m_value;
+
+				std::cout << pItem->getName() << " : " << pVal->QualityString() << " VAL = " << pVal->ToString() << std::endl;
+
+				//COPCItem * item = changes.GetNextKey(pos);
+				//std::cout << item->getName() << std::endl 
+				
+				//printf("-----> %s\n", item->getName().c_str());
 			}
 		}
 		
@@ -98,19 +109,27 @@ void main(void)
 {
 	COPCClient::init();
 
-	printf("Input hostname: \nWarning: NOT IP ADDRESS, use sucn as:\"Jhon-PC\"\n");//See readme to find reason
-	char C_str_name[100];
-	scanf("%s",C_str_name);
-	std::string hostName = C_str_name;
-	COPCHost *host = COPCClient::makeHost(hostName);
+	std::cout << "Input hostname: \nWarning: NOT IP ADDRESS, use sucn as:\"Jhon-PC\"" << std::endl; //See readme to find reason
+	std::string hostName;
+	std::getline(std::cin, hostName);
 	
+	std::unique_ptr<COPCHost> pHost;
+
+	try {
+		pHost = COPCClient::makeHost(hostName);
+	}
+	catch (const OPCException& ex) {
+		std::cerr << ex.reasonString();
+		return;
+	}
+		
 	//List servers
 	std::vector<std::string> localServerList;
-	host->getListOfDAServers(IID_CATID_OPCDAServer20, localServerList);
+	pHost->getListOfDAServers(IID_CATID_OPCDAServer20, localServerList);
 	unsigned i = 0;
 	printf("\nServer ID List:\n");
 	for (; i < localServerList.size(); i++){
-		printf("%d. %s\n", i,localServerList[i].c_str());
+		std::cout << i << " : " << localServerList[i];
 	}
 
 	// connect to OPC
@@ -118,19 +137,27 @@ void main(void)
 	int server_id;
 	scanf("%d",&server_id);
 	std::string serverName = localServerList[server_id];
-	COPCServer *opcServer = host->connectDAServer(serverName);
 
+	COPCServer* opcServer = nullptr;
+
+	try {
+		opcServer = pHost->connectDAServer(serverName);
+	}
+	catch (const OPCException& ex) {
+		std::cerr << ex.reasonString();
+		return;
+	}
 	// Check status
 	ServerStatus status;
 	opcServer->getStatus(status);
-	printf("Server state is %ld\n", status.dwServerState);
+	std::cout << "Server(" << status.vendorInfo << ") state is " << status.dwServerState << std::endl;
 
 	// browse server
 	std::vector<std::string> opcItemNames;
 	opcServer->getItemNames(opcItemNames);
-	printf("Got %d names\n", opcItemNames.size());
-	for (i = 0; i < opcItemNames.size(); i++){
-		printf("%s\n",opcItemNames[i].c_str());
+	std::cout << "Got "<< opcItemNames.size() << " names";
+	for (auto &name : opcItemNames){
+		std::cout << name << std::endl;
 	}
 
 	// make group

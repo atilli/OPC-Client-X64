@@ -365,7 +365,7 @@ int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<COPCItem
 
 	HRESULT *itemResult;
 	OPCITEMRESULT *itemDetails;
-	DWORD noItems = (DWORD)itemName.size();
+	const DWORD noItems = (DWORD)itemName.size();
 
 	HRESULT	result = getItemManagementInterface()->AddItems(noItems, itemDef, &itemDetails, &itemResult);
 	delete[] itemDef;

@@ -36,7 +36,8 @@ int COPCClient::count = 0;
 
 void COPCClient::init(OPCOLEInitMode mode)
 {
-	HRESULT result;
+	HRESULT result = NOERROR;
+
 	if (mode == APARTMENTTHREADED)
 	{
 		result = CoInitialize(nullptr);
@@ -97,11 +98,10 @@ void COPCClient::comFreeVariant(VARIANT *memory, unsigned size){
 
 
 
-COPCHost * COPCClient::makeHost(const std::string &hostName){
-	if (hostName.size()==0){
-		return new CLocalHost();
+std::unique_ptr<COPCHost> COPCClient::makeHost(const std::string &hostName){
+	if (hostName.size()==0 || hostName=="localhost") {
+		return std::make_unique<CLocalHost>();
 	}
-	
-	return new CRemoteHost(hostName);
+	return  std::make_unique<CRemoteHost>(hostName);
 }
 

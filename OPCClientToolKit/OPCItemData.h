@@ -2,6 +2,7 @@
 
 #include "OPCClientToolKitDLL.h"
 #include "opcda.h"
+#include <string>
 
 class COPCItem;
 
@@ -36,6 +37,10 @@ struct  OPCItemData{
 	void set(FILETIME time, WORD qual, VARIANT & val);
 
 	OPCItemData & operator=(OPCItemData &itemData);
+
+	std::string ToString();
+
+	std::string QualityString();
 };
 
 

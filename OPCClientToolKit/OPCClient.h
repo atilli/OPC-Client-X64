@@ -39,8 +39,10 @@ Boston, MA  02111-1307, USA.
 #include <objbase.h>
 #include <COMCat.h>
 #include <stdexcept>
+#include <memory>
 #include "opcda.h"
 #include "OPCItemData.h"
+
 
 
 class COPCHost;
@@ -115,7 +117,7 @@ public:
 	* @param hostname - may be empty (in which case a local host is created).
 	* @ returns host object (owned by caller).
 	*/
-	static COPCHost * makeHost(const std::string &hostName);
+	static std::unique_ptr<COPCHost> makeHost(const std::string &hostName);
 
 
 	static const GUID CATID_OPCDAv10;
