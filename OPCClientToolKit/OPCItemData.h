@@ -29,16 +29,3 @@ struct  OPCItemData{
 	std::string ToString();
 	std::string QualityString();
 };
-
-
-
-/**
-* Can't find an ATL autoptr map - this class provides the functionality I want.
-*/
-class  COPCItem_DataMap:public CAtlMap<COPCItem *, OPCItemData *>{
-public:
-	~COPCItem_DataMap();
-};
-
-
-

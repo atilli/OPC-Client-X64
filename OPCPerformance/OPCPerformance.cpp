@@ -42,9 +42,9 @@ public:
 		printf("-");
 		++completeCount;
 		unsigned noErrors = 0;
-		POSITION pos = transaction.opcData.GetStartPosition();
+		POSITION pos = transaction._opcData.GetStartPosition();
 		while (pos != NULL){
-			OPCItemData * data = transaction.opcData.GetNextValue(pos);
+			OPCItemData * data = transaction._opcData.GetNextValue(pos);
 			if (!data || FAILED(data->wQuality)){
 				++noErrors;
 			}
@@ -61,7 +61,7 @@ public:
 
 class CMyCallback:public IAsynchDataCallback{
 	public:
-		void OnDataChange(COPCGroup & group, CAtlMap<COPCItem *, OPCItemData *> & changes){
+		void OnDataChange(COPCGroup & group, std::map<COPCItem*, std::unique_ptr<OPCItemData>>& changes){
 			printf("Group %s, item changes\n", group.getName().c_str());
 			POSITION pos = changes.GetStartPosition();
 			while (pos != NULL){

@@ -103,7 +103,7 @@ public:
 			// it is a result of a refresh (see p106 of spec)
 			auto pTrans = COPCGroup::PopTransaction(Transid);
 
-			updateOPCData(pTrans->opcData, count, clienthandles, values,quality,time,errors);
+			updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
 			
 			pTrans->setCompleted();
 			
@@ -111,7 +111,7 @@ public:
 		}
 
 		if (usrHandler){
-			COPCItem_DataMap dataChanges;
+			std::map<COPCItem *, std::unique_ptr<OPCItemData>> dataChanges;
 			updateOPCData(dataChanges, count, clienthandles, values,quality,time,errors);
 			usrHandler->OnDataChange(callbacksGroup, dataChanges);
 		}
@@ -125,7 +125,7 @@ public:
 		FILETIME * time, HRESULT * errors)
 	{
 		auto pTrans = COPCGroup::PopTransaction(Transid);
-		updateOPCData(pTrans->opcData, count, clienthandles, values,quality,time,errors);
+		updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
 		pTrans->setCompleted();
 		
 		return S_OK;
@@ -159,31 +159,26 @@ public:
 	/**
 	* make OPC item
 	*/
-	static OPCItemData* makeOPCDataItem(VARIANT& value, WORD quality, FILETIME & time, HRESULT error){
+	static std::unique_ptr<OPCItemData> makeOPCDataItem(VARIANT& value, WORD quality, FILETIME & time, HRESULT error){
 		
 		if (FAILED(error)){
-			return new OPCItemData(error);
+			return std::make_unique<OPCItemData>(error);
 		} else {	
-			return new OPCItemData(time,quality,value,error);
+			return std::make_unique<OPCItemData>(time,quality,value,error);
 		}
 	}
 
 	/**
 	* Enter the OPC items data that resulted from an operation
 	*/
-	static void updateOPCData(COPCItem_DataMap &opcData, DWORD count, OPCHANDLE * clienthandles, 
+	static void updateOPCData(std::map<COPCItem *, std::unique_ptr<OPCItemData>> &opcData, DWORD count, OPCHANDLE * clienthandles, 
 		VARIANT* values, WORD * quality,FILETIME * time, HRESULT * errors){
 		// see page 136 - returned arrays may be out of order
 		for (unsigned i = 0; i < count; i++){
 			// TODO this is bad  - server could corrupt address - need to use look up table
 			COPCItem * item = (COPCItem *)clienthandles[i];
 			auto pData = makeOPCDataItem(values[i], quality[i], time[i], errors[i]);
-			COPCItem_DataMap::CPair* pair = opcData.Lookup(item);
-			if (pair == NULL){
-				opcData.SetAt(item, pData);
-			} else {
-				opcData.SetValueAt(pair,pData);
-			}
+			opcData[item] = std::move(pData);
 		}
 	}
 };
@@ -252,7 +247,7 @@ OPCHANDLE * COPCGroup::buildServerHandleList(std::vector<COPCItem *>& items){
 }
 
 
-void COPCGroup::readSync(std::vector<COPCItem *>& items, COPCItem_DataMap & opcData, OPCDATASOURCE source){
+void COPCGroup::readSync(std::vector<COPCItem *>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> & opcData, OPCDATASOURCE source){
 	OPCHANDLE *serverHandles = buildServerHandleList(items);
 	HRESULT *itemResult;
 	OPCITEMSTATE *itemState;
@@ -265,14 +260,9 @@ void COPCGroup::readSync(std::vector<COPCItem *>& items, COPCItem_DataMap & opcD
 	} 
 
 	for (unsigned i = 0; i < noItems; i++){
-		COPCItem * item = (COPCItem *)itemState[i].hClient;
+		COPCItem * item = (COPCItem *) itemState[i].hClient;
 		auto pOPCDataItem = CAsynchDataCallback::makeOPCDataItem(itemState[i].vDataValue, itemState[i].wQuality, itemState[i].ftTimeStamp, itemResult[i]);
-		COPCItem_DataMap::CPair* pair = opcData.Lookup(item);
-		if (pair == NULL){
-			opcData.SetAt(item,pOPCDataItem);
-		} else {
-			opcData.SetValueAt(pair,pOPCDataItem);
-		}
+		opcData[item] = std::move(pOPCDataItem);
 	}
 
 	delete []serverHandles;
@@ -376,8 +366,9 @@ int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<COPCItem
 
 	HRESULT	result = getItemManagementInterface()->AddItems(noItems, itemDef, &itemDetails, &itemResult);
 	delete[] itemDef;
-	for (int i=0; i < itemName.size(); i++){
-		delete tpm[i];
+	
+	for (auto name : tpm){
+		delete name;
 	}
 	if (FAILED(result)){
 		throw OPCException("Failed to add items");

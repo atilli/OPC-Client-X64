@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-
+#include <map>
 #include "OPCClient.h"
 
 class CTransaction;
@@ -46,7 +46,7 @@ public:
 	* keyed on OPCitem address (not owned)
 	* OPCitem data is owned by the transaction - may be NULL
 	*/
-	COPCItem_DataMap _opcData;
+	std::map<COPCItem *, std::unique_ptr<OPCItemData>> _opcData;
 
 
 	CTransaction(ITransactionComplete * completeCB = NULL);

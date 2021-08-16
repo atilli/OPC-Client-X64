@@ -40,6 +40,7 @@ Boston, MA  02111-1307, USA.
 #include <COMCat.h>
 #include <stdexcept>
 #include <memory>
+#include <map>
 #include "opcda.h"
 #include "OPCItemData.h"
 
@@ -76,7 +77,7 @@ public:
 class IAsynchDataCallback
 {
 public:
-	virtual void OnDataChange(COPCGroup & group, CAtlMap<COPCItem *, OPCItemData *> & changes) = 0;
+	virtual void OnDataChange(COPCGroup & group, std::map<COPCItem*, std::unique_ptr<OPCItemData>>& changes) = 0;
 };
 
 

@@ -53,14 +53,13 @@ Boston, MA  02111-1307, USA.
 */
 class CMyCallback:public IAsynchDataCallback{
 	public:
-		void OnDataChange(COPCGroup & group, CAtlMap<COPCItem *, OPCItemData *> & changes) override {
+		void OnDataChange(COPCGroup & group, std::map<COPCItem*, std::unique_ptr<OPCItemData>>& changes) override {
 			printf("Group %s, item changes\n", group.getName().c_str());
-			POSITION pos = changes.GetStartPosition();
-			while (pos != NULL){
-
-				auto kv = changes.GetNext(pos);
-				COPCItem* pItem = kv->m_key;
-				OPCItemData *pVal = kv->m_value;
+			
+			for(auto& kv : changes)
+			{
+				COPCItem* pItem = kv.first;
+				OPCItemData* pVal = kv.second.get();;
 
 				std::cout << pItem->getName() << " : " << pVal->QualityString() << " = " << pVal->ToString() << std::endl;
 
@@ -219,7 +218,7 @@ void main(void)
 	printf("Synch read quality %d value %d\n", data.wQuality, data.vDataValue.iVal);
 
 	// SYNCH read on Group
-	COPCItem_DataMap opcData;
+	std::map<COPCItem *, std::unique_ptr<OPCItemData>> opcData;
 	pGroup->readSync(itemsCreated,opcData, OPC_DS_DEVICE);
 
 	// Enable asynch - must be done before any asynch call will work

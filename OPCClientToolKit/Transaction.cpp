@@ -10,29 +10,35 @@ CTransaction::CTransaction(ITransactionComplete * completeCB)
 CTransaction::CTransaction(std::vector<COPCItem *>&items, ITransactionComplete * completeCB)
 :_completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB){
 	for (unsigned i = 0; i < items.size(); i++){
-		opcData.SetAt(items[i],NULL);
+		_opcData[items[i]] = std::make_unique<OPCItemData>();
 	}
 }
 
 
 void CTransaction::setItemError(COPCItem *item, HRESULT error){
-	auto pair = opcData.Lookup(item);
-	opcData.SetValueAt(pair,new OPCItemData(error));
+	
+	_opcData[item] = std::make_unique<OPCItemData>(error);
 }
 
 
 
 void CTransaction::setItemValue(COPCItem *item, FILETIME time, WORD qual, VARIANT & val, HRESULT err){
-	auto pair = opcData.Lookup(item);
-	opcData.SetValueAt(pair,new OPCItemData(time, qual, val, err));
+	_opcData[item] = std::make_unique<OPCItemData>(time, qual, val, err);
 }
 
 
 const OPCItemData * CTransaction::getItemValue(COPCItem *item) const{
-	auto pair = opcData.Lookup(item);
-	if (!pair) return nullptr; // abigious - we do'nt know if the key does not exist or there is no value - TODO throw exception
+	
+	OPCItemData* pFoundValue = nullptr;
 
-	return pair->m_value;
+	auto ite = _opcData.find(item);
+	if (ite != _opcData.end()) {
+		pFoundValue = ite->second.get();
+	}
+	else {
+		// abigious - we do'nt know if the key does not exist or there is no value - TODO throw exception
+	}
+	return pFoundValue;
 }
 
 void CTransaction::setCompleted(){

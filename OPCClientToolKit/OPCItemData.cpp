@@ -1,5 +1,6 @@
 #include <atlstr.h>
 #include <atlcoll.h>
+#include <map>
 #include "OPCItemData.h"
 #include "OPCClient.h"
 
@@ -140,23 +141,6 @@ OPCItemData & OPCItemData::operator=(OPCItemData &itemData){
 
 	return *this;
 }
-
-
-
-
-
-COPCItem_DataMap::~COPCItem_DataMap(){
-	/*POSITION pos = GetStartPosition();
-	while (pos != NULL){
-		OPCItemData * data = GetNextValue(pos);
-		if (data){
-			delete data;
-		}
-	}*/
-	RemoveAll();
-}
-
-
 
 
 

@@ -68,18 +68,17 @@ void COPCItem::writeSync(VARIANT &data){
 void COPCItem::readSync(OPCItemData &data, OPCDATASOURCE source){
 	std::vector<COPCItem *> items;
 	items.push_back(this);
-	COPCItem_DataMap opcData;
+	std::map<COPCItem *, std::unique_ptr<OPCItemData>> opcData;
 	group.readSync(items, opcData, source);
 		
-	COPCItem_DataMap::CPair* pos = opcData.Lookup(this);
-	if (pos){
-		OPCItemData * readData = opcData.GetValueAt(pos);
-		if (readData && !FAILED(readData->error)){
-			data = *readData;
+	auto ite = opcData.find(this);
+	if (ite!=opcData.end()){
+		OPCItemData * pReadData = ite->second.get();
+		if (pReadData && !FAILED(pReadData->error)){
+			data = *pReadData;
 			return;
 		}
 	} 
-
 	throw OPCException("Read failed");
 }
 	/*

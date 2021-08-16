@@ -168,7 +168,7 @@ public:
 	/**
 	* Read set of OPC items synchronously.
 	*/
-	void readSync(std::vector<COPCItem *>& items, COPCItem_DataMap &opcData, OPCDATASOURCE source);
+	void readSync(std::vector<COPCItem *>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> &opcData, OPCDATASOURCE source);
 
 
 	/**
