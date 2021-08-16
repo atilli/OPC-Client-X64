@@ -118,36 +118,37 @@ std::shared_ptr<CTransaction> COPCItem::readAsynch(ITransactionComplete *transac
 	return group.readAsync(items, transactionCB);
 }
 
-
-extern std::map<DWORD, std::shared_ptr<CTransaction>> transactionPointers;
-
 std::shared_ptr<CTransaction> COPCItem::writeAsynch(VARIANT &data, ITransactionComplete *transactionCB){
 	DWORD cancelID;
 	HRESULT * individualResults;
 	std::vector<COPCItem *> items;
 	items.push_back(this);
-	std::shared_ptr<CTransaction> trans = std::make_shared<CTransaction>(items,transactionCB);
-	DWORD transactionID = (DWORD)(uintptr_t) trans.get();
+	std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(items,transactionCB);
 	
-	transactionPointers[transactionID] = trans;
+	
+	
+	DWORD transactionID = pTrans->CreateTransactionID();
+
+	COPCGroup::AddTransaction(pTrans, transactionID);
 
 	HRESULT result = group.getAsych2IOInterface()->Write(1,&serversItemHandle,&data, transactionID,&cancelID,&individualResults);
 	
 	if (FAILED(result)){
 		//delete trans;
-		transactionPointers.erase(transactionID);
+		COPCGroup::PopTransaction(transactionID);
 		throw OPCException("Asynch Write failed");
 	}
 	
-	trans->setCancelId(cancelID);
+	pTrans->setCancelId(cancelID);
 
 	if (FAILED(individualResults[0])){
-		trans->setItemError(this,individualResults[0]);
-		trans->setCompleted(); // if all items return error then no callback will occur. p 104
+		pTrans->setItemError(this,individualResults[0]);
+		pTrans->setCompleted(); // if all items return error then no callback will occur. p 104
+		//activeMap.erase(transactionID);
 	}
 
 	COPCClient::comFree(individualResults);
-	return trans;
+	return pTrans;
 }
 
 void COPCItem::getSupportedProperties(std::vector<CPropertyDescription> &desc){

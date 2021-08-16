@@ -75,6 +75,7 @@ void CRemoteHost::makeRemoteObject(const IID requestedClass, const IID requested
 	if (FAILED(result))
 	{
 		printf("Error %x\n", result);
+
 		throw OPCException("Failed to get remote interface");
 	}
 

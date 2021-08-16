@@ -22,8 +22,8 @@ Boston, MA  02111-1307, USA.
 #include "OPCGroup.h"
 #include "OPCItem.h"
 
+std::map<DWORD, std::shared_ptr<CTransaction>> COPCGroup::_transactionPointers;
 
-std::map<DWORD, std::shared_ptr<CTransaction>> transactionPointers;
 
 
 /**
@@ -101,12 +101,11 @@ public:
 
 		if (Transid != 0){
 			// it is a result of a refresh (see p106 of spec)
-			std::shared_ptr<CTransaction> pTrans = transactionPointers[Transid];
+			auto pTrans = COPCGroup::PopTransaction(Transid);
+
 			updateOPCData(pTrans->opcData, count, clienthandles, values,quality,time,errors);
 			
 			pTrans->setCompleted();
-
-			transactionPointers.erase(Transid);
 			
 			return S_OK;	
 		}
@@ -125,10 +124,10 @@ public:
 		OPCHANDLE * clienthandles, VARIANT* values, WORD * quality,
 		FILETIME * time, HRESULT * errors)
 	{
-		std::shared_ptr<CTransaction> pTrans = transactionPointers[Transid];
-
+		auto pTrans = COPCGroup::PopTransaction(Transid);
 		updateOPCData(pTrans->opcData, count, clienthandles, values,quality,time,errors);
 		pTrans->setCompleted();
+		
 		return S_OK;
 	}
 
@@ -136,7 +135,8 @@ public:
 	STDMETHODIMP OnWriteComplete(DWORD Transid, OPCHANDLE grphandle, HRESULT mastererr, 
 		DWORD count, OPCHANDLE * clienthandles, HRESULT * errors)
 	{
-		std::shared_ptr<CTransaction> pTrans = transactionPointers[Transid];
+		
+		auto pTrans = COPCGroup::PopTransaction(Transid);
 
 		// see page 145 - number of items returned may be less than sent
 		for (unsigned i = 0; i < count; i++){
@@ -144,10 +144,7 @@ public:
 			COPCItem * item = (COPCItem *)clienthandles[i];
 			pTrans->setItemError(item, errors[i]); // this records error state - may be good
 		}
-
 		pTrans->setCompleted();
-		transactionPointers.erase(Transid);
-
 		return S_OK;
 	}
 
@@ -293,8 +290,8 @@ std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<COPCItem *>& item
 		OPCHANDLE *serverHandles = buildServerHandleList(items);
 		DWORD noItems = (DWORD)items.size();
 		DWORD transactionID = pTrans->CreateTransactionID();
-
-		transactionPointers[transactionID] = pTrans;
+		
+		COPCGroup::AddTransaction(pTrans, transactionID);
 
 		HRESULT result = iAsych2IO->Read(noItems, serverHandles, transactionID, &cancelID, &individualResults);
 		delete [] serverHandles;
@@ -333,7 +330,7 @@ std::shared_ptr<CTransaction> COPCGroup::refresh(OPCDATASOURCE source, ITransact
 		//delete trans;
 		throw OPCException("refresh failed");
 	}
-	transactionPointers[transactionID] = pTrans;
+	COPCGroup::AddTransaction(pTrans, transactionID);
 
 	return pTrans;
 }

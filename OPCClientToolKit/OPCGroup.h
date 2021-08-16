@@ -28,6 +28,7 @@ Boston, MA  02111-1307, USA.
 #include "Transaction.h"
 
 #include <map>
+#include <iostream>
 
 
 /**
@@ -48,7 +49,29 @@ class CAsynchDataCallback;
 */
 class COPCGroup  
 {
+public:
+	// STORE in host ??
+	static std::map<DWORD, std::shared_ptr<CTransaction>>& TransactionsMap() { return _transactionPointers;  }
+	static void AddTransaction(std::shared_ptr<CTransaction>& pTrans, DWORD id) {
+
+		std::cout << "ADD :" << id << std::endl;
+
+		_transactionPointers[id] = pTrans;
+	} 
+	static std::shared_ptr<CTransaction> PopTransaction(DWORD id) {
+
+		std::cout << "POP :" << id << std::endl;
+
+		std::shared_ptr<CTransaction> pFound = _transactionPointers[id];
+		if (pFound != nullptr) {
+			_transactionPointers.erase(id);
+		}
+		return pFound;
+	}
+
 private:
+	static std::map<DWORD, std::shared_ptr<CTransaction>> _transactionPointers;
+
 	ATL::CComPtr<IOPCGroupStateMgt>	iStateManagement;
 	ATL::CComPtr<IOPCSyncIO>		iSychIO;
 	ATL::CComPtr<IOPCAsyncIO2>		iAsych2IO;
