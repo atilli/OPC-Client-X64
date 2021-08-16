@@ -16,30 +16,17 @@ struct  OPCItemData{
 	VARIANT vDataValue;
 	HRESULT error;
 
-
 	OPCItemData(HRESULT err);
-
-
-
 	OPCItemData(FILETIME time, WORD qual, VARIANT & val, HRESULT err);
-
-
 	OPCItemData();
-
-
 
 	~OPCItemData();
 
-
 	void set(OPCITEMSTATE &itemState);
-
-
 	void set(FILETIME time, WORD qual, VARIANT & val);
 
 	OPCItemData & operator=(OPCItemData &itemData);
-
 	std::string ToString();
-
 	std::string QualityString();
 };
 

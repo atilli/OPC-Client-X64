@@ -146,13 +146,13 @@ OPCItemData & OPCItemData::operator=(OPCItemData &itemData){
 
 
 COPCItem_DataMap::~COPCItem_DataMap(){
-	POSITION pos = GetStartPosition();
+	/*POSITION pos = GetStartPosition();
 	while (pos != NULL){
 		OPCItemData * data = GetNextValue(pos);
 		if (data){
 			delete data;
 		}
-	}
+	}*/
 	RemoveAll();
 }
 

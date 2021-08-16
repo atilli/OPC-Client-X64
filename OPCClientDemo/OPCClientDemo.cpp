@@ -62,7 +62,7 @@ class CMyCallback:public IAsynchDataCallback{
 				COPCItem* pItem = kv->m_key;
 				OPCItemData *pVal = kv->m_value;
 
-				std::cout << pItem->getName() << " : " << pVal->QualityString() << " VAL = " << pVal->ToString() << std::endl;
+				std::cout << pItem->getName() << " : " << pVal->QualityString() << " = " << pVal->ToString() << std::endl;
 
 				//COPCItem * item = changes.GetNextKey(pos);
 				//std::cout << item->getName() << std::endl 
@@ -127,8 +127,8 @@ void main(void)
 	std::vector<std::string> localServerList;
 	pHost->getListOfDAServers(IID_CATID_OPCDAServer20, localServerList);
 	unsigned i = 0;
-	printf("\nServer ID List:\n");
-	for (; i < localServerList.size(); i++){
+	std::cout << "Server ID List : " << std::endl;
+		for (; i < localServerList.size(); i++){
 		std::cout << i << " : " << localServerList[i];
 	}
 
@@ -168,12 +168,12 @@ void main(void)
 
 	// make group
 	unsigned long refreshRate;
-	COPCGroup *group = pOpcServer->makeGroup("Group",true,1000,refreshRate,0.0);
+	std::unique_ptr<COPCGroup> pGroup = pOpcServer->makeGroup("Increments",true,1000,refreshRate,0.0);
 	std::vector<COPCItem *> items;
 
 	// make  a single item
 	std::string changeChanNameName = opcItemNames[5];
-	COPCItem * readWritableItem = group->addItem(changeChanNameName, true);
+	COPCItem * readWritableItem = pGroup->addItem(changeChanNameName, true);
 
 	// make several items
 	std::vector<std::string> itemNames;
@@ -183,7 +183,7 @@ void main(void)
 	//itemNames.push_back(opcItemNames[15]);
 	//itemNames.push_back(opcItemNames[16]);	
 
-	if (group->addItems(increments, itemsCreated,errors,true) != 0){
+	if (pGroup->addItems(increments, itemsCreated,errors,true) != 0){
 		std::cout << "Item create failed" << std::endl;
 	}
 
@@ -220,11 +220,11 @@ void main(void)
 
 	// SYNCH read on Group
 	COPCItem_DataMap opcData;
-	group->readSync(itemsCreated,opcData, OPC_DS_DEVICE);
+	pGroup->readSync(itemsCreated,opcData, OPC_DS_DEVICE);
 
 	// Enable asynch - must be done before any asynch call will work
 	CMyCallback usrCallBack;
-	group->enableAsynch(usrCallBack);
+	pGroup->enableAsynch(usrCallBack);
 	
 	// ASYNCH OPC item READ
 	CTransComplete complete;
@@ -238,7 +238,7 @@ void main(void)
 	}
 		// Aysnch read opc items from a group
 	complete.setCompletionMessage("*******Asynch read completion handler has been invoked (OPC GROUP)");
-	t = group->readAsync(itemsCreated, &complete);
+	t = pGroup->readAsync(itemsCreated, &complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 		
 
@@ -265,7 +265,7 @@ void main(void)
 
 	// Group refresh (asynch operation) - pass results to CMyCallback as well
 	complete.setCompletionMessage("*******Refresh completion handler has been invoked");
-	t = group->refresh(OPC_DS_DEVICE, /*true,*/ &complete);
+	t = pGroup->refresh(OPC_DS_DEVICE, /*true,*/ &complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 
 	// readWritableItem is member of group - look for this and use it as a guide to see if operation succeeded.

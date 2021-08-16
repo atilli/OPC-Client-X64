@@ -54,8 +54,8 @@ COPCServer::~COPCServer()
 
 
 
-COPCGroup *COPCServer::makeGroup(const std::string & groupName, bool active, unsigned long reqUpdateRate_ms, unsigned long &revisedUpdateRate_ms, float deadBand){
-	return new COPCGroup(groupName, active, reqUpdateRate_ms, revisedUpdateRate_ms, deadBand, *this);
+std::unique_ptr<COPCGroup> COPCServer::makeGroup(const std::string & groupName, bool active, unsigned long reqUpdateRate_ms, unsigned long &revisedUpdateRate_ms, float deadBand){
+	return std::make_unique<COPCGroup>(groupName, active, reqUpdateRate_ms, revisedUpdateRate_ms, deadBand, *this);
 }
 
 

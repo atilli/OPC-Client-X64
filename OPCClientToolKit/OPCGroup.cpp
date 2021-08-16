@@ -159,14 +159,13 @@ public:
 	/**
 	* make OPC item
 	*/
-	static OPCItemData * makeOPCDataItem(VARIANT& value, WORD quality, FILETIME & time, HRESULT error){
-		OPCItemData * data = NULL;
+	static OPCItemData* makeOPCDataItem(VARIANT& value, WORD quality, FILETIME & time, HRESULT error){
+		
 		if (FAILED(error)){
-			data = new OPCItemData(error);
+			return new OPCItemData(error);
 		} else {	
-			data = new OPCItemData(time,quality,value,error);	
+			return new OPCItemData(time,quality,value,error);
 		}
-		return data;
 	}
 
 	/**
@@ -178,12 +177,12 @@ public:
 		for (unsigned i = 0; i < count; i++){
 			// TODO this is bad  - server could corrupt address - need to use look up table
 			COPCItem * item = (COPCItem *)clienthandles[i];
-			OPCItemData * data = makeOPCDataItem(values[i], quality[i], time[i], errors[i]);
+			auto pData = makeOPCDataItem(values[i], quality[i], time[i], errors[i]);
 			COPCItem_DataMap::CPair* pair = opcData.Lookup(item);
 			if (pair == NULL){
-				opcData.SetAt(item,data);
+				opcData.SetAt(item, pData);
 			} else {
-				opcData.SetValueAt(pair,data);
+				opcData.SetValueAt(pair,pData);
 			}
 		}
 	}
@@ -267,12 +266,12 @@ void COPCGroup::readSync(std::vector<COPCItem *>& items, COPCItem_DataMap & opcD
 
 	for (unsigned i = 0; i < noItems; i++){
 		COPCItem * item = (COPCItem *)itemState[i].hClient;
-		OPCItemData * data = CAsynchDataCallback::makeOPCDataItem(itemState[i].vDataValue, itemState[i].wQuality, itemState[i].ftTimeStamp, itemResult[i]);
+		auto pOPCDataItem = CAsynchDataCallback::makeOPCDataItem(itemState[i].vDataValue, itemState[i].wQuality, itemState[i].ftTimeStamp, itemResult[i]);
 		COPCItem_DataMap::CPair* pair = opcData.Lookup(item);
 		if (pair == NULL){
-			opcData.SetAt(item,data);
+			opcData.SetAt(item,pOPCDataItem);
 		} else {
-			opcData.SetValueAt(pair,data);
+			opcData.SetValueAt(pair,pOPCDataItem);
 		}
 	}
 

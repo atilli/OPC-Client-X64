@@ -46,7 +46,7 @@ public:
 	* keyed on OPCitem address (not owned)
 	* OPCitem data is owned by the transaction - may be NULL
 	*/
-	COPCItem_DataMap opcData;
+	COPCItem_DataMap _opcData;
 
 
 	CTransaction(ITransactionComplete * completeCB = NULL);

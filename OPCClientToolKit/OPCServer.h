@@ -24,7 +24,7 @@ Boston, MA  02111-1307, USA.
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
-
+#include <memory>
 #include "OPCClient.h"
 #include "OPCGroup.h"
 
@@ -110,7 +110,7 @@ public:
 	/**
 	* Get an OPC group. Caller owns
 	*/
-	COPCGroup *makeGroup(const std::string & groupName, bool active, unsigned long reqUpdateRate_ms, unsigned long &revisedUpdateRate_ms, float deadBand); 
+	std::unique_ptr<COPCGroup> makeGroup(const std::string & groupName, bool active, unsigned long reqUpdateRate_ms, unsigned long &revisedUpdateRate_ms, float deadBand); 
 
 
 	/**
