@@ -26,7 +26,9 @@ struct  OPCItemData{
 	void set(FILETIME time, WORD qual, VARIANT & val);
 
 	OPCItemData & operator=(OPCItemData &itemData);
-	std::string ToString();
-	std::string QualityString();
-	std::string ConvertToString();
+	std::string ToString() const;
+	std::wstring ToWideString() const;
+	std::string QualityString() const;
+	bool IsString() const;
+
 };

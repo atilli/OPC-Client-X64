@@ -23,7 +23,7 @@ OPCItemData::OPCItemData(FILETIME time, WORD qual, VARIANT & val, HRESULT err){
 	wQuality = qual;
 	error = err;
 }
-std::string OPCItemData::QualityString() {
+std::string OPCItemData::QualityString() const {
 	
 	switch(wQuality)
 	{
@@ -53,8 +53,22 @@ std::string OPCItemData::QualityString() {
 
 //	return dblstr;
 //}
+bool OPCItemData::IsString() const {
+	return (vDataValue.vt == VT_BSTR);
+}
+std::wstring OPCItemData::ToWideString() const {
 
-std::string OPCItemData::ToString() {
+	std::wstring ret = L"?";
+
+	switch (vDataValue.vt)
+	{
+	case VT_BSTR:
+		ret = _bstr_t(vDataValue.bstrVal);
+		break;
+	}
+	return ret;
+}
+std::string OPCItemData::ToString() const {
 	
 	std::string ret = "?";
 	USES_CONVERSION;

@@ -59,15 +59,17 @@ class CMyCallback:public IAsynchDataCallback{
 			for(auto& kv : changes)
 			{
 				COPCItem* pItem = kv.first;
-				OPCItemData* pVal = kv.second.get();;
+				OPCItemData* pVal = kv.second.get();
 
 				std::cout << pItem->getName() << " : " << pVal->QualityString() << " = " << pVal->ToString() << std::endl;
-
-				//COPCItem * item = changes.GetNextKey(pos);
-				//std::cout << item->getName() << std::endl 
-				
-				//printf("-----> %s\n", item->getName().c_str());
-			}
+				// Below Would work with right local ?? , anywya no need to print not UTC-16 to console...
+				/*/if (pVal->IsString()) {
+					std::wcout << pVal->ToWideString() << std::endl;
+				}
+				else {
+					std::cout << pItem->getName() << " : " << pVal->QualityString() << " = " << pVal->ToString() << std::endl;
+				}*/
+				}
 		}
 		
 };
@@ -108,7 +110,7 @@ void main(void)
 {
 	COPCClient::init();
 
-	std::cout << "Input hostname: \nWarning: NOT IP ADDRESS, use sucn as:\"Jhon-PC\"" << std::endl; //See readme to find reason
+	std::cout << "Input hostname: \nWarning: NOT IP ADDRESS, use such as:\"Jhon-PC\"" << std::endl; //See readme to find reason
 	std::string hostName;
 	std::getline(std::cin, hostName);
 	
@@ -132,10 +134,13 @@ void main(void)
 	}
 
 	// connect to OPC
-	printf("\nSelect a Server ID:\n");
-	int server_id;
-	scanf("%d",&server_id);
-	std::string serverName = localServerList[server_id];
+	std::cout << "Select a Server ID : " << std::endl;
+	std::string server_id;
+	std::getline(std::cin, server_id);
+	
+	int index = stoi(server_id);
+
+	std::string serverName = localServerList[index];
 
 	std::unique_ptr<COPCServer> pOpcServer;
 
@@ -216,7 +221,8 @@ void main(void)
 	// SYNCH READ of item
 	OPCItemData data;
 	readWritableItem->readSync(data,OPC_DS_DEVICE);
-	printf("Synch read quality %d value %d\n", data.wQuality, data.vDataValue.iVal);
+
+	std::cout << "Synch read " << data.QualityString() << " " << data.ToString();
 
 	// SYNCH read on Group
 	std::map<COPCItem *, std::unique_ptr<OPCItemData>> opcData;
@@ -232,9 +238,9 @@ void main(void)
 	std::shared_ptr<CTransaction> t = readWritableItem->readAsynch(&complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 	
-	const OPCItemData * asychData = t->getItemValue(readWritableItem.get()); // not owned
-	if (!FAILED(asychData->error)){
-		printf("Asynch read quality %d value %d\n", asychData->wQuality, asychData->vDataValue.iVal);
+	const OPCItemData * pAsynchData = t->getItemValue(readWritableItem.get()); // not owned
+	if (!FAILED(pAsynchData->error)){
+		std::cout << "ASynch read " << pAsynchData->QualityString() << " " << pAsynchData->ToString();
 	}
 		// Aysnch read opc items from a group
 	complete.setCompletionMessage("*******Asynch read completion handler has been invoked (OPC GROUP)");
@@ -256,11 +262,11 @@ void main(void)
 	t = readWritableItem->writeAsynch(var, &complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 
-	asychData = t->getItemValue(readWritableItem.get()); // not owned
-	if (!FAILED(asychData->error)){
-		printf("Asynch write comleted OK\n");
+	pAsynchData = t->getItemValue(readWritableItem.get()); // not owned
+	if (!FAILED(pAsynchData->error)){
+		std::cout << "Asynch write comleted OK" << std::endl;
 	}else{
-		printf("Asynch write failed\n");
+		std::cout << "Asynch write failed" << std::endl;
 	}
 
 	// Group refresh (asynch operation) - pass results to CMyCallback as well
@@ -269,11 +275,11 @@ void main(void)
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 
 	// readWritableItem is member of group - look for this and use it as a guide to see if operation succeeded.
-	asychData = t->getItemValue(readWritableItem.get()); 
-	if (!FAILED(asychData->error)){
-		printf("refresh compeleted OK\n");
+	pAsynchData = t->getItemValue(readWritableItem.get());
+	if (!FAILED(pAsynchData->error)){
+		std::cout << "Refresh completed OK" << std::endl;
 	}else{
-		printf("refresh failed\n");
+		std::cout << "Refresh completed OK" << std::endl;
 	}
 
 	// just loop - changes to Items within a group are picked up here 
