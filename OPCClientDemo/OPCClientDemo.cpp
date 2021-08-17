@@ -86,8 +86,8 @@ public:
 		completionMessage = "Asynch operation is completed";
 	};
 
-	void complete(CTransaction &transaction){
-		printf("%s\n",completionMessage.c_str());
+	void complete(CTransaction& transaction) {
+		std::cout << completionMessage << std::endl;
 	}
 
 	void setCompletionMessage(const std::string & message){
@@ -222,11 +222,14 @@ void main(void)
 	OPCItemData data;
 	readWritableItem->readSync(data,OPC_DS_DEVICE);
 
-	std::cout << "Synch read " << data.QualityString() << " " << data.ToString();
+	std::cout << "Synch read on grop returned" << data.QualityString() << " " << data.ToString() << std::endl;
 
 	// SYNCH read on Group
 	std::map<COPCItem *, std::unique_ptr<OPCItemData>> opcData;
 	pGroup->readSync(itemsCreated,opcData, OPC_DS_DEVICE);
+
+	std::cout << "Synch read on group" << std::endl;
+
 
 	// Enable asynch - must be done before any asynch call will work
 	CMyCallback usrCallBack;
@@ -234,19 +237,30 @@ void main(void)
 	
 	// ASYNCH OPC item READ
 	CTransComplete complete;
-	complete.setCompletionMessage("*******Asynch read completion handler has been invoked (OPC item)");
-	std::shared_ptr<CTransaction> t = readWritableItem->readAsynch(&complete);
+	std::shared_ptr<CTransaction> t;
+	const OPCItemData* pAsynchData;
+	/*complete.setCompletionMessage("*******Asynch read completion handler has been invoked (OPC item)");
+	t = readWritableItem->readAsynch(&complete);
+
+	std::cout << "ASynch read on item " << std::endl;
+
 	MESSAGEPUMPUNTIL(t->isCompeleted())
+
+	std::cout << "ASynch read on item completed" << std::endl;
 	
-	const OPCItemData * pAsynchData = t->getItemValue(readWritableItem.get()); // not owned
+	pAsynchData = t->getItemValue(readWritableItem.get()); // not owned
 	if (!FAILED(pAsynchData->error)){
 		std::cout << "ASynch read " << pAsynchData->QualityString() << " " << pAsynchData->ToString();
-	}
-		// Aysnch read opc items from a group
+	}*/
+
+	std::cout << "ASynch read on group " << std::endl;
+
+	// Aysnch read opc items from a group
 	complete.setCompletionMessage("*******Asynch read completion handler has been invoked (OPC GROUP)");
 	t = pGroup->readAsync(itemsCreated, &complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
-		
+	
+	std::cout << "ASynch read on group complete" << std::endl;
 
 	// SYNCH write
 	VARIANT var;
@@ -283,5 +297,6 @@ void main(void)
 	}
 
 	// just loop - changes to Items within a group are picked up here 
+	std::cout << "Entering loop" << std::endl;
 	MESSAGEPUMPUNTIL(false)
 }

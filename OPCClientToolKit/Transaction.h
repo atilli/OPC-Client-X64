@@ -31,7 +31,7 @@ class CTransaction{
 	/**
 	* Optional transation complete callback - not owned
 	*/
-	ITransactionComplete * completeCallBack;
+	ITransactionComplete * _completeCallBack;
 
 	// true when the transaction has completed
 	bool _completed;

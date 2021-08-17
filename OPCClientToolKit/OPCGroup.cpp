@@ -97,6 +97,8 @@ public:
 		VARIANT * values, WORD * quality, FILETIME  * time,
 		HRESULT * errors)
 	{
+		std::cout << "OnDataChange Transid " << Transid << std::endl;
+
 		IAsynchDataCallback * usrHandler = callbacksGroup.getUsrAsynchHandler();
 
 		if (Transid != 0){
@@ -111,6 +113,7 @@ public:
 		}
 
 		if (usrHandler){
+			
 			std::map<COPCItem *, std::unique_ptr<OPCItemData>> dataChanges;
 			updateOPCData(dataChanges, count, clienthandles, values,quality,time,errors);
 			usrHandler->OnDataChange(callbacksGroup, dataChanges);
@@ -124,6 +127,8 @@ public:
 		OPCHANDLE * clienthandles, VARIANT* values, WORD * quality,
 		FILETIME * time, HRESULT * errors)
 	{
+		std::cout << "OnReadComplete Transid " << Transid << std::endl;
+
 		auto pTrans = COPCGroup::PopTransaction(Transid);
 		updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
 		pTrans->setCompleted();
@@ -135,7 +140,8 @@ public:
 	STDMETHODIMP OnWriteComplete(DWORD Transid, OPCHANDLE grphandle, HRESULT mastererr, 
 		DWORD count, OPCHANDLE * clienthandles, HRESULT * errors)
 	{
-		
+		std::cout << "OnWriteComplete Transid " << Transid << std::endl;
+
 		auto pTrans = COPCGroup::PopTransaction(Transid);
 
 		// see page 145 - number of items returned may be less than sent

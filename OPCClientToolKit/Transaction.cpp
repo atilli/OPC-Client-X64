@@ -2,18 +2,18 @@
 
 
 CTransaction::CTransaction(ITransactionComplete * completeCB)
-:_completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB){
+:_completed(false), _cancelID(0xffffffff), _completeCallBack(completeCB){
 }
 
 
 
-CTransaction::CTransaction(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete* completeCB) : _completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB) {
+CTransaction::CTransaction(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete* completeCB) : _completed(FALSE), _cancelID(0xffffffff), _completeCallBack(completeCB) {
 
 	for (std::unique_ptr<COPCItem>& item : items) {
 		_opcData[item.get()] = std::make_unique<OPCItemData>();
 	}
 }
-CTransaction::CTransaction(std::vector<COPCItem*> &items, ITransactionComplete * completeCB) :_completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB) {
+CTransaction::CTransaction(std::vector<COPCItem*> &items, ITransactionComplete * completeCB) :_completed(FALSE), _cancelID(0xffffffff), _completeCallBack(completeCB) {
 
 	for (auto pItem : items) {
 		_opcData[pItem] = std::make_unique<OPCItemData>();
@@ -47,8 +47,8 @@ const OPCItemData * CTransaction::getItemValue(COPCItem *item) const{
 }
 
 void CTransaction::setCompleted(){
-	_completed = TRUE;
-	if (completeCallBack){
-		completeCallBack->complete(*this);
+	_completed = true;
+	if (_completeCallBack){
+		_completeCallBack->complete(*this);
 	}
 }
