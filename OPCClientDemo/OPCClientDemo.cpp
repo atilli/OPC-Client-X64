@@ -172,11 +172,12 @@ void main(void)
 
 	// make  a single item
 	std::string changeChanNameName = opcItemNames[5];
-	COPCItem * readWritableItem = pGroup->addItem(changeChanNameName, true);
+	
+	std::unique_ptr<COPCItem> readWritableItem = pGroup->addItem(changeChanNameName, true);
 
 	// make several items
 	std::vector<std::string> itemNames;
-	std::vector<COPCItem *>itemsCreated;
+	std::vector<std::unique_ptr<COPCItem>> itemsCreated;
 	std::vector<HRESULT> errors;
 	//for(auto incTag : increments) 
 	//itemNames.push_back(opcItemNames[15]);
@@ -231,7 +232,7 @@ void main(void)
 	std::shared_ptr<CTransaction> t = readWritableItem->readAsynch(&complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 	
-	const OPCItemData * asychData = t->getItemValue(readWritableItem); // not owned
+	const OPCItemData * asychData = t->getItemValue(readWritableItem.get()); // not owned
 	if (!FAILED(asychData->error)){
 		printf("Asynch read quality %d value %d\n", asychData->wQuality, asychData->vDataValue.iVal);
 	}
@@ -255,7 +256,7 @@ void main(void)
 	t = readWritableItem->writeAsynch(var, &complete);
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 
-	asychData = t->getItemValue(readWritableItem); // not owned
+	asychData = t->getItemValue(readWritableItem.get()); // not owned
 	if (!FAILED(asychData->error)){
 		printf("Asynch write comleted OK\n");
 	}else{
@@ -268,7 +269,7 @@ void main(void)
 	MESSAGEPUMPUNTIL(t->isCompeleted())
 
 	// readWritableItem is member of group - look for this and use it as a guide to see if operation succeeded.
-	asychData = t->getItemValue(readWritableItem); 
+	asychData = t->getItemValue(readWritableItem.get()); 
 	if (!FAILED(asychData->error)){
 		printf("refresh compeleted OK\n");
 	}else{

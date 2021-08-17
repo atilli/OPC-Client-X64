@@ -104,13 +104,13 @@ private:
 	/**
 	* list of OPC items associated with this goup. Not owned (at the moment!)
 	*/
-	std::vector<COPCItem *> items;
+	std::vector<COPCItem *> _items;
 
 
 	/**
 	* Name of the group
 	*/
-	const std::string name;
+	const std::string _name;
 
 
 	/**
@@ -129,21 +129,21 @@ private:
 	/**
 	* Caller owns returned array
 	*/
-	OPCHANDLE * buildServerHandleList(std::vector<COPCItem *>& items);
+	OPCHANDLE* buildServerHandleList(std::vector<std::unique_ptr<COPCItem>>& items);
+	OPCHANDLE* buildServerHandleList(COPCItem& item);
 
 public:
 	COPCGroup(const std::string & groupName, bool active, unsigned long reqUpdateRate_ms, unsigned long &revisedUpdateRate_ms, float deadBand, COPCServer &server);
 
 	virtual ~COPCGroup();
 
-
-	COPCItem * addItem(std::string &itemName, bool active);
+	std::unique_ptr<COPCItem> addItem(std::string &itemName, bool active);
 
 	/**
 	* returns the number of failed item creates
 	* itemsCreated[x] will be null if could not create and will contain error code in corresponding error entry
 	*/
-	int addItems(std::vector<std::string>& itemName, std::vector<COPCItem *>& itemsCreated, std::vector<HRESULT>& errors, bool active);
+	int addItems(std::vector<std::string>& itemName, std::vector<std::unique_ptr<COPCItem>>& itemsCreated, std::vector<HRESULT>& errors, bool active);
 
 
 	/**
@@ -168,13 +168,14 @@ public:
 	/**
 	* Read set of OPC items synchronously.
 	*/
-	void readSync(std::vector<COPCItem *>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> &opcData, OPCDATASOURCE source);
+	void readSync(std::vector<std::unique_ptr<COPCItem>>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> &opcData, OPCDATASOURCE source);
+	void readSync(COPCItem& item, std::unique_ptr<OPCItemData>& opcData, OPCDATASOURCE source); // Added simple read from single item...
 
 
 	/**
 	* Read a defined group of OPC item asynchronously
 	*/
-	std::shared_ptr<CTransaction> readAsync(std::vector<COPCItem *>& items, ITransactionComplete *transactionCB = NULL);
+	std::shared_ptr<CTransaction> readAsync(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete *transactionCB = nullptr);
 
 
 	/**
@@ -183,7 +184,7 @@ public:
 	* Transaction object is owned by caller.
 	* If group asynch is disabled then this call will not work
 	*/ 
-	std::shared_ptr<CTransaction> refresh(OPCDATASOURCE source, ITransactionComplete *transactionCB = NULL);
+	std::shared_ptr<CTransaction> refresh(OPCDATASOURCE source, ITransactionComplete *transactionCB = nullptr);
 
 
 
@@ -202,7 +203,7 @@ public:
 	}
 
 	const std::string & getName() const {
-		return name;
+		return _name;
 	}
 
 	IAsynchDataCallback *getUsrAsynchHandler(){

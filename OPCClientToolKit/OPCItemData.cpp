@@ -1,5 +1,6 @@
 #include <atlstr.h>
 #include <atlcoll.h>
+#include <comdef.h>
 #include <map>
 #include "OPCItemData.h"
 #include "OPCClient.h"
@@ -35,6 +36,23 @@ std::string OPCItemData::QualityString() {
 		break;
 	}
 }
+//std::string OPCItemData::ConvertToString() {
+//
+//	int wslen = ::SysStringLen(vDataValue.bstrVal);
+//	return ConvertWCSToMBS((wchar_t*)vDataValue.bstrVal, wslen);
+//}
+//std::string ConvertWCSToMBS(const wchar_t* pstr, long wslen)
+//{
+//	int len = ::WideCharToMultiByte(CP_ACP, 0, pstr, wslen, NULL, 0, NULL, NULL);
+//
+//	std::string dblstr(len, '\0');
+//	len = ::WideCharToMultiByte(CP_ACP, 0 /* no flags */,
+//		pstr, wslen /* not necessary NULL-terminated */,
+//		&dblstr[0], len,
+//		NULL, NULL /* no default char */);
+
+//	return dblstr;
+//}
 
 std::string OPCItemData::ToString() {
 	
@@ -44,7 +62,7 @@ std::string OPCItemData::ToString() {
 	switch (vDataValue.vt)
 	{
 	case VT_BSTR:
-		ret = W2A(vDataValue.bstrVal);
+		ret = _bstr_t(vDataValue.bstrVal);
 		break;
 	case VT_INT:
 		ret = std::to_string(vDataValue.intVal);

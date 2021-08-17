@@ -50,9 +50,10 @@ protected:
 	// used to set data for the OPC item AFTER it has been created in the server.
 	void setOPCParams(OPCHANDLE handle, VARTYPE type, DWORD dwAccess);
 
-	// items may only be created by group.
-	COPCItem(std::string &itemName, COPCGroup &g);
+	
 public:
+	// items may only be created by group.
+	COPCItem(std::string& itemName, COPCGroup& g);
 
 	virtual ~COPCItem();
 

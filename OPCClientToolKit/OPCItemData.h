@@ -28,4 +28,5 @@ struct  OPCItemData{
 	OPCItemData & operator=(OPCItemData &itemData);
 	std::string ToString();
 	std::string QualityString();
+	std::string ConvertToString();
 };

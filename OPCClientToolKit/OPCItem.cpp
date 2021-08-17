@@ -66,18 +66,13 @@ void COPCItem::writeSync(VARIANT &data){
 
 
 void COPCItem::readSync(OPCItemData &data, OPCDATASOURCE source){
-	std::vector<COPCItem *> items;
-	items.push_back(this);
-	std::map<COPCItem *, std::unique_ptr<OPCItemData>> opcData;
-	group.readSync(items, opcData, source);
-		
-	auto ite = opcData.find(this);
-	if (ite!=opcData.end()){
-		OPCItemData * pReadData = ite->second.get();
-		if (pReadData && !FAILED(pReadData->error)){
-			data = *pReadData;
-			return;
-		}
+	
+	std::unique_ptr<OPCItemData> pReadData;
+	group.readSync(*this, pReadData, source);
+
+	if (pReadData.get()!=nullptr && !FAILED(pReadData->error)){
+		data = *pReadData;
+		return;
 	} 
 	throw OPCException("Read failed");
 }
@@ -112,9 +107,10 @@ void COPCItem::readSync(OPCItemData &data, OPCDATASOURCE source){
 
 
 std::shared_ptr<CTransaction> COPCItem::readAsynch(ITransactionComplete *transactionCB){
-	std::vector<COPCItem *> items;
+	/*std::vector<COPCItem*> items;
 	items.push_back(this);
-	return group.readAsync(items, transactionCB);
+	return group.readAsync(items, transactionCB);*/
+	return std::make_shared<CTransaction>();
 }
 
 std::shared_ptr<CTransaction> COPCItem::writeAsynch(VARIANT &data, ITransactionComplete *transactionCB){
@@ -178,16 +174,18 @@ void COPCItem::getProperties(const std::vector<CPropertyDescription> &propsToRea
 	unsigned noProperties = (DWORD)propsToRead.size();
 	VARIANT *pValues = NULL;
 	HRESULT *pErrors = NULL;
-	DWORD *pPropertyIDs = new DWORD[noProperties];
+	
+	std::unique_ptr<DWORD[]> pPropertyIDs(new DWORD[noProperties]);
+
 	for (unsigned i = 0; i < noProperties; i++){
-		pPropertyIDs[i] = propsToRead[i].id;
+		pPropertyIDs.get()[i] = propsToRead[i].id;
 	}
 	propsRead.RemoveAll();
 	propsRead.SetCount(noProperties);
 	
 	USES_CONVERSION;
-	HRESULT res = group.getServer().getPropertiesInterface()->GetItemProperties(T2OLE(name.c_str()), noProperties, pPropertyIDs, &pValues, &pErrors);
-	delete []pPropertyIDs;
+	HRESULT res = group.getServer().getPropertiesInterface()->GetItemProperties(T2OLE(name.c_str()), noProperties, pPropertyIDs.get(), &pValues, &pErrors);
+	
 	if (FAILED(res)){
 		throw OPCException("Failed to restrieve property values", res);
 	}

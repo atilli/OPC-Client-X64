@@ -1,4 +1,4 @@
-#include ".\transaction.h"
+#include "Transaction.h"
 
 
 CTransaction::CTransaction(ITransactionComplete * completeCB)
@@ -7,13 +7,18 @@ CTransaction::CTransaction(ITransactionComplete * completeCB)
 
 
 
-CTransaction::CTransaction(std::vector<COPCItem *>&items, ITransactionComplete * completeCB)
-:_completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB){
-	for (unsigned i = 0; i < items.size(); i++){
-		_opcData[items[i]] = std::make_unique<OPCItemData>();
+CTransaction::CTransaction(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete* completeCB) : _completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB) {
+
+	for (std::unique_ptr<COPCItem>& item : items) {
+		_opcData[item.get()] = std::make_unique<OPCItemData>();
 	}
 }
+CTransaction::CTransaction(std::vector<COPCItem*> &items, ITransactionComplete * completeCB) :_completed(FALSE), _cancelID(0xffffffff), completeCallBack(completeCB) {
 
+	for (auto pItem : items) {
+		_opcData[pItem] = std::make_unique<OPCItemData>();
+	}
+}
 
 void CTransaction::setItemError(COPCItem *item, HRESULT error){
 	

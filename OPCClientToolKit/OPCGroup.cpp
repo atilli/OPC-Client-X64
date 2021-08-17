@@ -191,7 +191,7 @@ public:
 
 
 COPCGroup::COPCGroup(const std::string & groupName, bool active, unsigned long reqUpdateRate_ms, unsigned long &revisedUpdateRate_ms, float deadBand, COPCServer &server):
-name(groupName),
+_name(groupName),
 opcServer(server)
 {
 	USES_CONVERSION;
@@ -232,12 +232,18 @@ COPCGroup::~COPCGroup()
 {
 	opcServer.getServerInterface()->RemoveGroup(groupHandle, FALSE);
 }
+OPCHANDLE* COPCGroup::buildServerHandleList(COPCItem& item) {
+	
+	OPCHANDLE* handles = new OPCHANDLE[1];
+	handles[0] = item.getHandle();
+	return handles;
+}
 
-
-OPCHANDLE * COPCGroup::buildServerHandleList(std::vector<COPCItem *>& items){
+OPCHANDLE * COPCGroup::buildServerHandleList(std::vector<std::unique_ptr<COPCItem>>& items){
 	OPCHANDLE *handles = new OPCHANDLE[items.size()];
+
 	for (unsigned i = 0; i < items.size(); i++){
-		if (items[i]==NULL){
+		if (items[i].get()==nullptr){
 			delete []handles;
 			throw OPCException("Item is NULL");
 		}
@@ -245,9 +251,27 @@ OPCHANDLE * COPCGroup::buildServerHandleList(std::vector<COPCItem *>& items){
 	}
 	return handles;
 }
+void COPCGroup::readSync(COPCItem& item, std::unique_ptr<OPCItemData>& opcData, OPCDATASOURCE source) {
+	
+	OPCHANDLE* serverHandles = buildServerHandleList(item);
+	HRESULT* itemResult;
+	OPCITEMSTATE* itemState;
+	DWORD noItems = 1;// (DWORD)items.size();
 
+	HRESULT	result = iSychIO->Read(source, noItems, serverHandles, &itemState, &itemResult);
+	if (FAILED(result)) {
+		delete[]serverHandles;
+		throw OPCException("Read failed");
+	}
+	auto pOPCDataItem = CAsynchDataCallback::makeOPCDataItem(itemState[0].vDataValue, itemState[0].wQuality, itemState[0].ftTimeStamp, itemResult[0]);
+	opcData = std::move(pOPCDataItem);
+	
+	delete[]serverHandles;
+	COPCClient::comFree(itemResult);
+	COPCClient::comFree(itemState);
+}
 
-void COPCGroup::readSync(std::vector<COPCItem *>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> & opcData, OPCDATASOURCE source){
+void COPCGroup::readSync(std::vector<std::unique_ptr<COPCItem>>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> & opcData, OPCDATASOURCE source){
 	OPCHANDLE *serverHandles = buildServerHandleList(items);
 	HRESULT *itemResult;
 	OPCITEMSTATE *itemState;
@@ -270,9 +294,7 @@ void COPCGroup::readSync(std::vector<COPCItem *>& items, std::map<COPCItem *, st
 	COPCClient::comFree(itemState);	
 }
 
-
-
-std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<COPCItem *>& items, ITransactionComplete *transactionCB){
+std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete *transactionCB){
 		DWORD cancelID;
 		HRESULT * individualResults;
 		std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(items,transactionCB);
@@ -293,7 +315,7 @@ std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<COPCItem *>& item
 		unsigned failCount = 0;
 		for (unsigned i = 0;i < noItems; i++){
 			if (FAILED(individualResults[i])){
-				pTrans->setItemError(items[i],individualResults[i]);
+				pTrans->setItemError(items[i].get(),individualResults[i]);
 				failCount++;
 			}
 		}
@@ -310,7 +332,7 @@ std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<COPCItem *>& item
 
 std::shared_ptr<CTransaction> COPCGroup::refresh(OPCDATASOURCE source, ITransactionComplete *transactionCB){
 	DWORD cancelID;
-	std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(items, transactionCB);
+	std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(_items, transactionCB);
 
 	DWORD transactionID = pTrans->CreateTransactionID();
 
@@ -326,35 +348,37 @@ std::shared_ptr<CTransaction> COPCGroup::refresh(OPCDATASOURCE source, ITransact
 
 
 
-COPCItem * COPCGroup::addItem(std::string &itemName, bool active)
+std::unique_ptr<COPCItem> COPCGroup::addItem(std::string &itemName, bool active)
 {
 	std::vector<std::string> names;
-	std::vector<COPCItem *> itemsCreated;
+	std::vector<std::unique_ptr<COPCItem>> itemsCreated;
 	std::vector<HRESULT> errors;
 	names.push_back(itemName);
 	if (addItems(names, itemsCreated, errors, active)!= 0){
 		throw OPCException("Failed to add item");
 	}
-	return itemsCreated[0];
+	std::unique_ptr<COPCItem> ret = std::move(itemsCreated[0]);
+
+	return ret;
 }
 
 
 
 
-int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<COPCItem *>& itemsCreated, std::vector<HRESULT>& errors, bool active){
+int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<std::unique_ptr<COPCItem>>& itemsCreated, std::vector<HRESULT>& errors, bool active){
 	itemsCreated.resize(itemName.size());
 	errors.resize(itemName.size());
  	OPCITEMDEF *itemDef = new OPCITEMDEF[itemName.size()];
 	unsigned i = 0;
 	std::vector<CT2OLE *> tpm;
 	for (; i < itemName.size(); i++){
-		itemsCreated[i] = new COPCItem(itemName[i],*this);
+		itemsCreated[i] = std::make_unique<COPCItem>(itemName[i],*this);
 		USES_CONVERSION;
 		tpm.push_back(new CT2OLE(itemName[i].c_str())) ;
 		itemDef[i].szItemID = **(tpm.end()-1);
 		itemDef[i].szAccessPath = NULL;//wideName;
 		itemDef[i].bActive = active;
-		itemDef[i].hClient = (DWORD)itemsCreated[i];
+		itemDef[i].hClient = (OPCHANDLE) itemsCreated[i].get(); // ATI todo will not work in x64 ?? , todo check OPCHANLDE in x64 
 		itemDef[i].dwBlobSize = 0;
 		itemDef[i].pBlob = NULL;
 		itemDef[i].vtRequestedDataType = VT_EMPTY;
@@ -383,8 +407,7 @@ int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<COPCItem
 		}
 
 		if (FAILED(itemResult[i])){
-			delete itemsCreated[i];
-			itemsCreated[i] = NULL;
+			itemsCreated[i].reset();
 			errors[i] = itemResult[i];
 			errorCount++;
 		} else {

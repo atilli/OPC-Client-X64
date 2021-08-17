@@ -54,7 +54,8 @@ public:
 	/**
 	* Used where the transaction completion will result in data being received.
 	*/
-	CTransaction(std::vector<COPCItem *>&items, ITransactionComplete * completeCB);
+	CTransaction(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete * completeCB);
+	CTransaction(std::vector<COPCItem*> &items, ITransactionComplete* completeCB); // ATI, used by rfresh code needs to be changed later..
 
 
 	
