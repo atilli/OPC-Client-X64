@@ -26,7 +26,7 @@ Boston, MA  02111-1307, USA.
 
 
 COPCItem::COPCItem(std::string &itemName, COPCGroup &g):
-name(itemName), group(g){
+_name(itemName), _group(g){
 }
 
 
@@ -34,22 +34,22 @@ name(itemName), group(g){
 COPCItem::~COPCItem()
 {
 	HRESULT *itemResult;
-	group.getItemManagementInterface()->RemoveItems(1, &serversItemHandle, &itemResult);
+	_group.getItemManagementInterface()->RemoveItems(1, &_serversItemHandle, &itemResult);
 	COPCClient::comFree(itemResult);
 }
 
 
 void COPCItem::setOPCParams(OPCHANDLE handle, VARTYPE type, DWORD dwAccess){
-	serversItemHandle	=handle; 
-	vtCanonicalDataType	=type; 
-	dwAccessRights		=dwAccess;
+	_serversItemHandle	=handle; 
+	_vtCanonicalDataType	=type; 
+	_dwAccessRights		=dwAccess;
 }
 
 
 
 void COPCItem::writeSync(VARIANT &data){
 	HRESULT * itemWriteErrors; 
-	HRESULT result = group.getSychIOInterface()->Write(1, &serversItemHandle, &data, &itemWriteErrors);
+	HRESULT result = _group.getSychIOInterface()->Write(1, &_serversItemHandle, &data, &itemWriteErrors);
 	if (FAILED(result))
 	{
 		throw OPCException("write failed");
@@ -68,7 +68,7 @@ void COPCItem::writeSync(VARIANT &data){
 void COPCItem::readSync(OPCItemData &data, OPCDATASOURCE source){
 	
 	std::unique_ptr<OPCItemData> pReadData;
-	group.readSync(*this, pReadData, source);
+	_group.readSync(*this, pReadData, source);
 
 	if (pReadData.get()!=nullptr && !FAILED(pReadData->error)){
 		data = *pReadData;
@@ -116,17 +116,14 @@ std::shared_ptr<CTransaction> COPCItem::readAsynch(ITransactionComplete *transac
 std::shared_ptr<CTransaction> COPCItem::writeAsynch(VARIANT &data, ITransactionComplete *transactionCB){
 	DWORD cancelID;
 	HRESULT * individualResults;
-	std::vector<COPCItem *> items;
-	items.push_back(this);
-	std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(items,transactionCB);
 	
-	
+	std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(*this,transactionCB);
 	
 	DWORD transactionID = pTrans->CreateTransactionID();
 
 	COPCGroup::AddTransaction(pTrans, transactionID);
 
-	HRESULT result = group.getAsych2IOInterface()->Write(1,&serversItemHandle,&data, transactionID,&cancelID,&individualResults);
+	HRESULT result = _group.getAsych2IOInterface()->Write(1,&_serversItemHandle,&data, transactionID,&cancelID,&individualResults);
 	
 	if (FAILED(result)){
 		//delete trans;
@@ -153,7 +150,7 @@ void COPCItem::getSupportedProperties(std::vector<CPropertyDescription> &desc){
 	VARTYPE *pvtDataTypes;
 
 	USES_CONVERSION;
-	HRESULT res = group.getServer().getPropertiesInterface()->QueryAvailableProperties(T2OLE(name.c_str()), &noProperties, &pPropertyIDs, &pDescriptions, &pvtDataTypes);
+	HRESULT res = _group.getServer().getPropertiesInterface()->QueryAvailableProperties(T2OLE(_name.c_str()), &noProperties, &pPropertyIDs, &pDescriptions, &pvtDataTypes);
 	if (FAILED(res)){
 		throw OPCException("Failed to restrieve properties", res);
 	}
@@ -184,7 +181,7 @@ void COPCItem::getProperties(const std::vector<CPropertyDescription> &propsToRea
 	propsRead.SetCount(noProperties);
 	
 	USES_CONVERSION;
-	HRESULT res = group.getServer().getPropertiesInterface()->GetItemProperties(T2OLE(name.c_str()), noProperties, pPropertyIDs.get(), &pValues, &pErrors);
+	HRESULT res = _group.getServer().getPropertiesInterface()->GetItemProperties(T2OLE(_name.c_str()), noProperties, pPropertyIDs.get(), &pValues, &pErrors);
 	
 	if (FAILED(res)){
 		throw OPCException("Failed to restrieve property values", res);

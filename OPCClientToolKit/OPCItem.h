@@ -37,13 +37,13 @@ class COPCGroup;
 class  COPCItem  
 {
 private:
-	OPCHANDLE serversItemHandle;
-    VARTYPE vtCanonicalDataType;
-    DWORD dwAccessRights;
+	OPCHANDLE _serversItemHandle;
+    VARTYPE _vtCanonicalDataType;
+    DWORD _dwAccessRights;
 
-	COPCGroup & group;
+	COPCGroup & _group;
 
-	std::string name;
+	std::string _name;
 	
 protected:
 	friend class COPCGroup;
@@ -76,15 +76,15 @@ public:
 
 	
 	DWORD getAccessRights() const{
-		return dwAccessRights;
+		return _dwAccessRights;
 	}
 
 	OPCHANDLE getHandle() const{
-		return serversItemHandle;
+		return _serversItemHandle;
 	}	
 
 	const std::string & getName() const{
-		return name;
+		return _name;
 	} 
 
 	void getSupportedProperties(std::vector<CPropertyDescription> &desc);

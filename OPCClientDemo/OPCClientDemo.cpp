@@ -178,11 +178,11 @@ void main(void)
 	// make  a single item
 	std::string changeChanNameName = opcItemNames[5];
 	
-	std::unique_ptr<COPCItem> readWritableItem = pGroup->addItem(changeChanNameName, true);
+	std::shared_ptr<COPCItem> readWritableItem = pGroup->addItem(changeChanNameName, true);
 
 	// make several items
 	std::vector<std::string> itemNames;
-	std::vector<std::unique_ptr<COPCItem>> itemsCreated;
+	std::vector<std::shared_ptr<COPCItem>> itemsCreated;
 	std::vector<HRESULT> errors;
 	//for(auto incTag : increments) 
 	//itemNames.push_back(opcItemNames[15]);

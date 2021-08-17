@@ -105,7 +105,7 @@ public:
 			// it is a result of a refresh (see p106 of spec)
 			auto pTrans = COPCGroup::PopTransaction(Transid);
 
-			updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
+			callbacksGroup.updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
 			
 			pTrans->setCompleted();
 			
@@ -115,7 +115,7 @@ public:
 		if (usrHandler){
 			
 			std::map<COPCItem *, std::unique_ptr<OPCItemData>> dataChanges;
-			updateOPCData(dataChanges, count, clienthandles, values,quality,time,errors);
+			callbacksGroup.updateOPCData(dataChanges, count, clienthandles, values,quality,time,errors);
 			usrHandler->OnDataChange(callbacksGroup, dataChanges);
 		}
 		return S_OK;
@@ -130,7 +130,7 @@ public:
 		std::cout << "OnReadComplete Transid " << Transid << std::endl;
 
 		auto pTrans = COPCGroup::PopTransaction(Transid);
-		updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
+		callbacksGroup.updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
 		pTrans->setCompleted();
 		
 		return S_OK;
@@ -177,7 +177,7 @@ public:
 	/**
 	* Enter the OPC items data that resulted from an operation
 	*/
-	static void updateOPCData(std::map<COPCItem *, std::unique_ptr<OPCItemData>> &opcData, DWORD count, OPCHANDLE * clienthandles, 
+	static void updateOPCData(std::map<COPCItem*,std::unique_ptr<OPCItemData>> &opcData, DWORD count, OPCHANDLE * clienthandles, 
 		VARIANT* values, WORD * quality,FILETIME * time, HRESULT * errors){
 		// see page 136 - returned arrays may be out of order
 		for (unsigned i = 0; i < count; i++){
@@ -198,45 +198,52 @@ public:
 
 COPCGroup::COPCGroup(const std::string & groupName, bool active, unsigned long reqUpdateRate_ms, unsigned long &revisedUpdateRate_ms, float deadBand, COPCServer &server):
 _name(groupName),
-opcServer(server)
+_opcServer(server)
 {
 	USES_CONVERSION;
 	WCHAR* wideName = T2OLE(groupName.c_str());
 
 
-	HRESULT result = opcServer.getServerInterface()->AddGroup(wideName, active, reqUpdateRate_ms, 0, 0, &deadBand,
-		0, &groupHandle, &revisedUpdateRate_ms, IID_IOPCGroupStateMgt, (LPUNKNOWN*)&iStateManagement);
+	HRESULT result = _opcServer.getServerInterface()->AddGroup(wideName, active, reqUpdateRate_ms, 0, 0, &deadBand,
+		0, &_groupHandle, &revisedUpdateRate_ms, IID_IOPCGroupStateMgt, (LPUNKNOWN*)&_iStateManagement);
 	if (FAILED(result))
 	{
 		throw OPCException("Failed to Add group");
 	} 
 
-	result = iStateManagement->QueryInterface(IID_IOPCSyncIO, (void**)&iSychIO);
+	result = _iStateManagement->QueryInterface(IID_IOPCSyncIO, (void**)&_iSychIO);
 	if (FAILED(result)){
 		throw OPCException("Failed to get IID_IOPCSyncIO");
 	}
 
-	result = iStateManagement->QueryInterface(IID_IOPCAsyncIO2, (void**)&iAsych2IO);
+	result = _iStateManagement->QueryInterface(IID_IOPCAsyncIO2, (void**)&_iAsych2IO);
 	if (FAILED(result)){
 		throw OPCException("Failed to get IID_IOPCAsyncIO2");
 	}
 
-	result = iStateManagement->QueryInterface(IID_IOPCItemMgt, (void**)&iItemManagement);
+	result = _iStateManagement->QueryInterface(IID_IOPCItemMgt, (void**)&_iItemManagement);
 	if (FAILED(result)){
 		throw OPCException("Failed to get IID_IOPCItemMgt");
 	}
 }
-
-
-
-
-
-
-
-
 COPCGroup::~COPCGroup()
 {
-	opcServer.getServerInterface()->RemoveGroup(groupHandle, FALSE);
+	_opcServer.getServerInterface()->RemoveGroup(_groupHandle, FALSE);
+}
+void COPCGroup::updateOPCData(std::map<COPCItem*, std::unique_ptr<OPCItemData>>& opcData, DWORD count, OPCHANDLE* clienthandles,
+	VARIANT* values, WORD* quality, FILETIME* time, HRESULT* errors)
+{
+	// see page 136 - returned arrays may be out of order
+	for (unsigned i = 0; i < count; i++) {
+		// TODO this is bad  - server could corrupt address - need to use look up table
+		auto ite = _items.find(clienthandles[i]);
+		if(ite!=_items.end())
+		{
+			COPCItem* item = ite->second.get();
+			auto pData = CAsynchDataCallback::makeOPCDataItem(values[i], quality[i], time[i], errors[i]);
+			opcData[item] = std::move(pData);
+		}
+	}
 }
 OPCHANDLE* COPCGroup::buildServerHandleList(COPCItem& item) {
 	
@@ -245,7 +252,7 @@ OPCHANDLE* COPCGroup::buildServerHandleList(COPCItem& item) {
 	return handles;
 }
 
-OPCHANDLE * COPCGroup::buildServerHandleList(std::vector<std::unique_ptr<COPCItem>>& items){
+OPCHANDLE * COPCGroup::buildServerHandleList(std::vector<std::shared_ptr<COPCItem>>& items){
 	OPCHANDLE *handles = new OPCHANDLE[items.size()];
 
 	for (unsigned i = 0; i < items.size(); i++){
@@ -264,7 +271,7 @@ void COPCGroup::readSync(COPCItem& item, std::unique_ptr<OPCItemData>& opcData, 
 	OPCITEMSTATE* itemState;
 	DWORD noItems = 1;// (DWORD)items.size();
 
-	HRESULT	result = iSychIO->Read(source, noItems, serverHandles, &itemState, &itemResult);
+	HRESULT	result = _iSychIO->Read(source, noItems, serverHandles, &itemState, &itemResult);
 	if (FAILED(result)) {
 		delete[]serverHandles;
 		throw OPCException("Read failed");
@@ -277,13 +284,13 @@ void COPCGroup::readSync(COPCItem& item, std::unique_ptr<OPCItemData>& opcData, 
 	COPCClient::comFree(itemState);
 }
 
-void COPCGroup::readSync(std::vector<std::unique_ptr<COPCItem>>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> & opcData, OPCDATASOURCE source){
+void COPCGroup::readSync(std::vector<std::shared_ptr<COPCItem>>& items, std::map<COPCItem*,std::unique_ptr<OPCItemData>>& opcData, OPCDATASOURCE source){
 	OPCHANDLE *serverHandles = buildServerHandleList(items);
 	HRESULT *itemResult;
 	OPCITEMSTATE *itemState;
 	DWORD noItems = (DWORD)items.size();
 
-	HRESULT	result = iSychIO->Read(source, noItems, serverHandles, &itemState, &itemResult);
+	HRESULT	result = _iSychIO->Read(source, noItems, serverHandles, &itemState, &itemResult);
 	if (FAILED(result)){
 		delete []serverHandles;
 		throw OPCException("Read failed");
@@ -300,7 +307,7 @@ void COPCGroup::readSync(std::vector<std::unique_ptr<COPCItem>>& items, std::map
 	COPCClient::comFree(itemState);	
 }
 
-std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete *transactionCB){
+std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<std::shared_ptr<COPCItem>>& items, ITransactionComplete *transactionCB){
 		DWORD cancelID;
 		HRESULT * individualResults;
 		std::shared_ptr<CTransaction> pTrans = std::make_shared<CTransaction>(items,transactionCB);
@@ -310,7 +317,7 @@ std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<std::unique_ptr<C
 		
 		COPCGroup::AddTransaction(pTrans, transactionID);
 
-		HRESULT result = iAsych2IO->Read(noItems, serverHandles, transactionID, &cancelID, &individualResults);
+		HRESULT result = _iAsych2IO->Read(noItems, serverHandles, transactionID, &cancelID, &individualResults);
 		delete [] serverHandles;
 		if (FAILED(result)){
 			//delete trans;
@@ -342,7 +349,7 @@ std::shared_ptr<CTransaction> COPCGroup::refresh(OPCDATASOURCE source, ITransact
 
 	DWORD transactionID = pTrans->CreateTransactionID();
 
-	HRESULT result = iAsych2IO->Refresh2(source, transactionID, &cancelID);
+	HRESULT result = _iAsych2IO->Refresh2(source, transactionID, &cancelID);
 	if (FAILED(result)){
 		//delete trans;
 		throw OPCException("refresh failed");
@@ -354,40 +361,50 @@ std::shared_ptr<CTransaction> COPCGroup::refresh(OPCDATASOURCE source, ITransact
 
 
 
-std::unique_ptr<COPCItem> COPCGroup::addItem(std::string &itemName, bool active)
+std::shared_ptr<COPCItem> COPCGroup::addItem(std::string &itemName, bool active)
 {
 	std::vector<std::string> names;
-	std::vector<std::unique_ptr<COPCItem>> itemsCreated;
+	std::vector<std::shared_ptr<COPCItem>> itemsCreated;
 	std::vector<HRESULT> errors;
 	names.push_back(itemName);
 	if (addItems(names, itemsCreated, errors, active)!= 0){
 		throw OPCException("Failed to add item");
 	}
-	std::unique_ptr<COPCItem> ret = std::move(itemsCreated[0]);
-
+	std::shared_ptr<COPCItem> ret = itemsCreated[0];
 	return ret;
 }
 
 
 
 
-int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<std::unique_ptr<COPCItem>>& itemsCreated, std::vector<HRESULT>& errors, bool active){
+int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<std::shared_ptr<COPCItem>>& itemsCreated, std::vector<HRESULT>& errors, bool active){
 	itemsCreated.resize(itemName.size());
 	errors.resize(itemName.size());
  	OPCITEMDEF *itemDef = new OPCITEMDEF[itemName.size()];
+	
+	
+
 	unsigned i = 0;
 	std::vector<CT2OLE *> tpm;
 	for (; i < itemName.size(); i++){
-		itemsCreated[i] = std::make_unique<COPCItem>(itemName[i],*this);
+
+		std::shared_ptr<COPCItem> pOPCItem = std::make_shared<COPCItem>(itemName[i], *this);
+		OPCHANDLE itemHandle = (OPCHANDLE) pOPCItem.get();  // ATI todo will not work in x64 ?? , todo check OPCHANLDE in x64 
+		
 		USES_CONVERSION;
 		tpm.push_back(new CT2OLE(itemName[i].c_str())) ;
+
 		itemDef[i].szItemID = **(tpm.end()-1);
 		itemDef[i].szAccessPath = NULL;//wideName;
 		itemDef[i].bActive = active;
-		itemDef[i].hClient = (OPCHANDLE) itemsCreated[i].get(); // ATI todo will not work in x64 ?? , todo check OPCHANLDE in x64 
+		itemDef[i].hClient = itemHandle;
 		itemDef[i].dwBlobSize = 0;
 		itemDef[i].pBlob = NULL;
 		itemDef[i].vtRequestedDataType = VT_EMPTY;
+		
+		itemsCreated[i]= pOPCItem;
+
+		_items[itemHandle] = pOPCItem;
 	}
 
 	HRESULT *itemResult;
@@ -439,14 +456,14 @@ void COPCGroup::enableAsynch(IAsynchDataCallback &handler){
 
 
 	ATL::CComPtr<IConnectionPointContainer> iConnectionPointContainer = 0;
-	HRESULT result = iStateManagement->QueryInterface(IID_IConnectionPointContainer, (void**)&iConnectionPointContainer);
+	HRESULT result = _iStateManagement->QueryInterface(IID_IConnectionPointContainer, (void**)&iConnectionPointContainer);
 	if (FAILED(result))
 	{
 		throw OPCException("Could not get IID_IConnectionPointContainer");
 	}
 
 
-	result = iConnectionPointContainer->FindConnectionPoint(IID_IOPCDataCallback, &iAsynchDataCallbackConnectionPoint);
+	result = iConnectionPointContainer->FindConnectionPoint(IID_IOPCDataCallback, &_iAsynchDataCallbackConnectionPoint);
 	if (FAILED(result))
 	{
 		throw OPCException("Could not get IID_IOPCDataCallback");
@@ -454,10 +471,10 @@ void COPCGroup::enableAsynch(IAsynchDataCallback &handler){
 
 
 	asynchDataCallBackHandler = new CAsynchDataCallback(*this);
-	result = iAsynchDataCallbackConnectionPoint->Advise(asynchDataCallBackHandler, &callbackHandle);
+	result = _iAsynchDataCallbackConnectionPoint->Advise(asynchDataCallBackHandler, &callbackHandle);
 	if (FAILED(result))
 	{
-		iAsynchDataCallbackConnectionPoint = NULL;
+		_iAsynchDataCallbackConnectionPoint = NULL;
 		asynchDataCallBackHandler = NULL;
 		throw OPCException("Failed to set DataCallbackConnectionPoint");
 	}
@@ -469,7 +486,7 @@ void COPCGroup::enableAsynch(IAsynchDataCallback &handler){
 
 
 void COPCGroup::setState(DWORD reqUpdateRate_ms, DWORD &returnedUpdateRate_ms, float deadBand, BOOL active){
-	HRESULT result = iStateManagement->SetState(&reqUpdateRate_ms, &returnedUpdateRate_ms, &active,0, &deadBand,0,0);
+	HRESULT result = _iStateManagement->SetState(&reqUpdateRate_ms, &returnedUpdateRate_ms, &active,0, &deadBand,0,0);
 	if (FAILED(result))
 	{
 		throw OPCException("Failed to set group state");
@@ -483,8 +500,8 @@ void COPCGroup::disableAsynch(){
 	if (asynchDataCallBackHandler == NULL){
 		throw OPCException("Asynch is not exabled");
 	}
-	iAsynchDataCallbackConnectionPoint->Unadvise(callbackHandle);
-	iAsynchDataCallbackConnectionPoint = NULL;
+	_iAsynchDataCallbackConnectionPoint->Unadvise(callbackHandle);
+	_iAsynchDataCallbackConnectionPoint = NULL;
 	asynchDataCallBackHandler = NULL;// WE DO NOT DELETE callbackHandler, let the COM ref counting take care of that
 	userAsynchCBHandler = NULL;
 }

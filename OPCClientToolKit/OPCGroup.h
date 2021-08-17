@@ -27,7 +27,9 @@ Boston, MA  02111-1307, USA.
 #include "OPCClient.h"
 #include "Transaction.h"
 
+
 #include <map>
+#include <unordered_map>
 #include <iostream>
 
 
@@ -72,27 +74,27 @@ public:
 private:
 	static std::map<DWORD, std::shared_ptr<CTransaction>> _transactionPointers;
 
-	ATL::CComPtr<IOPCGroupStateMgt>	iStateManagement;
-	ATL::CComPtr<IOPCSyncIO>		iSychIO;
-	ATL::CComPtr<IOPCAsyncIO2>		iAsych2IO;
-	ATL::CComPtr<IOPCItemMgt>		iItemManagement;
+	ATL::CComPtr<IOPCGroupStateMgt>	_iStateManagement;
+	ATL::CComPtr<IOPCSyncIO>		_iSychIO;
+	ATL::CComPtr<IOPCAsyncIO2>		_iAsych2IO;
+	ATL::CComPtr<IOPCItemMgt>		_iItemManagement;
 
 	/**
 	* Used to keep track of the connection point for the
 	* AsynchDataCallback
 	*/
-	ATL::CComPtr<IConnectionPoint> iAsynchDataCallbackConnectionPoint;
+	ATL::CComPtr<IConnectionPoint> _iAsynchDataCallbackConnectionPoint;
 
 
 	/**
 	* handle given the group by the server
 	*/
-	DWORD groupHandle;
+	DWORD _groupHandle;
 
 	/**
 	* The server this group belongs to
 	*/
-	COPCServer &opcServer;
+	COPCServer &_opcServer;
 
 
 	/**
@@ -102,9 +104,9 @@ private:
 
 
 	/**
-	* list of OPC items associated with this goup. Not owned (at the moment!)
+	* list of OPC items associated with this goup. 
 	*/
-	std::vector<COPCItem *> _items;
+	std::unordered_map<OPCHANDLE,std::shared_ptr<COPCItem>> _items;
 
 
 	/**
@@ -129,21 +131,22 @@ private:
 	/**
 	* Caller owns returned array
 	*/
-	OPCHANDLE* buildServerHandleList(std::vector<std::unique_ptr<COPCItem>>& items);
+	OPCHANDLE* buildServerHandleList(std::vector<std::shared_ptr<COPCItem>>& items);
 	OPCHANDLE* buildServerHandleList(COPCItem& item);
 
 public:
 	COPCGroup(const std::string & groupName, bool active, unsigned long reqUpdateRate_ms, unsigned long &revisedUpdateRate_ms, float deadBand, COPCServer &server);
+	void updateOPCData(std::map<COPCItem*, std::unique_ptr<OPCItemData>>& opcData, DWORD count, OPCHANDLE* clienthandles, VARIANT* values, WORD* quality, FILETIME* time, HRESULT* errors);
 
 	virtual ~COPCGroup();
 
-	std::unique_ptr<COPCItem> addItem(std::string &itemName, bool active);
+	std::shared_ptr<COPCItem> addItem(std::string &itemName, bool active);
 
 	/**
 	* returns the number of failed item creates
 	* itemsCreated[x] will be null if could not create and will contain error code in corresponding error entry
 	*/
-	int addItems(std::vector<std::string>& itemName, std::vector<std::unique_ptr<COPCItem>>& itemsCreated, std::vector<HRESULT>& errors, bool active);
+	int addItems(std::vector<std::string>& itemName, std::vector<std::shared_ptr<COPCItem>>& itemsCreated, std::vector<HRESULT>& errors, bool active);
 
 
 	/**
@@ -168,14 +171,14 @@ public:
 	/**
 	* Read set of OPC items synchronously.
 	*/
-	void readSync(std::vector<std::unique_ptr<COPCItem>>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> &opcData, OPCDATASOURCE source);
+	void readSync(std::vector<std::shared_ptr<COPCItem>>& items, std::map<COPCItem *, std::unique_ptr<OPCItemData>> &opcData, OPCDATASOURCE source);
 	void readSync(COPCItem& item, std::unique_ptr<OPCItemData>& opcData, OPCDATASOURCE source); // Added simple read from single item...
 
 
 	/**
 	* Read a defined group of OPC item asynchronously
 	*/
-	std::shared_ptr<CTransaction> readAsync(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete *transactionCB = nullptr);
+	std::shared_ptr<CTransaction> readAsync(std::vector<std::shared_ptr<COPCItem>>& items, ITransactionComplete *transactionCB = nullptr);
 
 
 	/**
@@ -189,17 +192,17 @@ public:
 
 
 	ATL::CComPtr<IOPCSyncIO> & getSychIOInterface(){
-		return iSychIO;
+		return _iSychIO;
 	}
 
 
 	ATL::CComPtr<IOPCAsyncIO2> & getAsych2IOInterface(){
-		return iAsych2IO;
+		return _iAsych2IO;
 	}
 
 
 	ATL::CComPtr<IOPCItemMgt> &getItemManagementInterface(){
-		return iItemManagement;
+		return _iItemManagement;
 	}
 
 	const std::string & getName() const {
@@ -214,7 +217,7 @@ public:
 	* returns reaference to the OPC server that this group belongs to.
 	*/
 	COPCServer & getServer(){
-		return opcServer;
+		return _opcServer;
 	}
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include "OPCClient.h"
 
 class CTransaction;
@@ -54,9 +55,9 @@ public:
 	/**
 	* Used where the transaction completion will result in data being received.
 	*/
-	CTransaction(std::vector<std::unique_ptr<COPCItem>>& items, ITransactionComplete * completeCB);
-	CTransaction(std::vector<COPCItem*> &items, ITransactionComplete* completeCB); // ATI, used by rfresh code needs to be changed later..
-
+	CTransaction(std::vector<std::shared_ptr<COPCItem>>& items, ITransactionComplete * completeCB);
+	CTransaction(std::unordered_map<OPCHANDLE, std::shared_ptr<COPCItem>> &items, ITransactionComplete* completeCB); // ATI, used by rfresh code needs to be changed later..
+	CTransaction(COPCItem& item, ITransactionComplete* completeCB);
 
 	
 	void setItemError(COPCItem *item, HRESULT error);
