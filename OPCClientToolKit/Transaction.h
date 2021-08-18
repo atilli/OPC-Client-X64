@@ -60,7 +60,7 @@ public:
 	CTransaction(COPCItem& item, ITransactionComplete* completeCB);
 
 	
-	void setItemError(COPCItem *item, HRESULT error);
+	void setItemError(COPCItem& item, HRESULT error);
 
 
 	void setItemValue(COPCItem *item, FILETIME time, WORD qual, VARIANT & val, HRESULT err);

@@ -105,10 +105,11 @@ public:
 			// it is a result of a refresh (see p106 of spec)
 			auto pTrans = COPCGroup::PopTransaction(Transid);
 
-			callbacksGroup.updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
-			
-			pTrans->setCompleted();
-			
+			if (pTrans!=nullptr) {
+				callbacksGroup.updateOPCData(pTrans->_opcData, count, clienthandles, values, quality, time, errors);
+
+				pTrans->setCompleted();
+			}
 			return S_OK;	
 		}
 
@@ -130,9 +131,10 @@ public:
 		std::cout << "OnReadComplete Transid " << Transid << std::endl;
 
 		auto pTrans = COPCGroup::PopTransaction(Transid);
-		callbacksGroup.updateOPCData(pTrans->_opcData, count, clienthandles, values,quality,time,errors);
-		pTrans->setCompleted();
-		
+		if (pTrans != nullptr) {
+			callbacksGroup.updateOPCData(pTrans->_opcData, count, clienthandles, values, quality, time, errors);
+			pTrans->setCompleted();
+		}
 		return S_OK;
 	}
 
@@ -143,14 +145,18 @@ public:
 		std::cout << "OnWriteComplete Transid " << Transid << std::endl;
 
 		auto pTrans = COPCGroup::PopTransaction(Transid);
+		
+		if (pTrans != nullptr) {
+			// see page 145 - number of items returned may be less than sent
+			for (unsigned i = 0; i < count; i++) {
 
-		// see page 145 - number of items returned may be less than sent
-		for (unsigned i = 0; i < count; i++){
-			// TODO this is bad  - server could corrupt address - need to use look up table
-			COPCItem * item = (COPCItem *)clienthandles[i];
-			pTrans->setItemError(item, errors[i]); // this records error state - may be good
+				auto pItemInGroup = callbacksGroup.findItem(clienthandles[i]);
+				if (pItemInGroup != nullptr) {
+					pTrans->setItemError(*pItemInGroup, errors[i]); // this records error state - may be good
+				}
+			}
+			pTrans->setCompleted();
 		}
-		pTrans->setCompleted();
 		return S_OK;
 	}
 
@@ -177,7 +183,7 @@ public:
 	/**
 	* Enter the OPC items data that resulted from an operation
 	*/
-	static void updateOPCData(std::map<COPCItem*,std::unique_ptr<OPCItemData>> &opcData, DWORD count, OPCHANDLE * clienthandles, 
+	/*static void updateOPCData(std::map<COPCItem*, std::unique_ptr<OPCItemData>>& opcData, DWORD count, OPCHANDLE* clienthandles,
 		VARIANT* values, WORD * quality,FILETIME * time, HRESULT * errors){
 		// see page 136 - returned arrays may be out of order
 		for (unsigned i = 0; i < count; i++){
@@ -186,7 +192,7 @@ public:
 			auto pData = makeOPCDataItem(values[i], quality[i], time[i], errors[i]);
 			opcData[item] = std::move(pData);
 		}
-	}
+	}*/
 };
 
 
@@ -328,7 +334,7 @@ std::shared_ptr<CTransaction> COPCGroup::readAsync(std::vector<std::shared_ptr<C
 		unsigned failCount = 0;
 		for (unsigned i = 0;i < noItems; i++){
 			if (FAILED(individualResults[i])){
-				pTrans->setItemError(items[i].get(),individualResults[i]);
+				pTrans->setItemError(*(items[i]),individualResults[i]);
 				failCount++;
 			}
 		}
@@ -359,7 +365,17 @@ std::shared_ptr<CTransaction> COPCGroup::refresh(OPCDATASOURCE source, ITransact
 	return pTrans;
 }
 
+std::shared_ptr<COPCItem> COPCGroup::findItem(OPCHANDLE clientHandle)
+{
+	std::shared_ptr<COPCItem> found;
 
+	auto ite = _items.find(clientHandle);
+	if (ite != _items.end())
+	{
+		found = ite->second;
+	}
+	return found;
+}
 
 std::shared_ptr<COPCItem> COPCGroup::addItem(std::string &itemName, bool active)
 {

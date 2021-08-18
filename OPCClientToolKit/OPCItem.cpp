@@ -134,7 +134,7 @@ std::shared_ptr<CTransaction> COPCItem::writeAsynch(VARIANT &data, ITransactionC
 	pTrans->setCancelId(cancelID);
 
 	if (FAILED(individualResults[0])){
-		pTrans->setItemError(this,individualResults[0]);
+		pTrans->setItemError(*this,individualResults[0]);
 		pTrans->setCompleted(); // if all items return error then no callback will occur. p 104
 		//activeMap.erase(transactionID);
 	}

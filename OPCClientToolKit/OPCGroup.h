@@ -141,7 +141,8 @@ public:
 	virtual ~COPCGroup();
 
 	std::shared_ptr<COPCItem> addItem(std::string &itemName, bool active);
-
+	std::shared_ptr<COPCItem> findItem(OPCHANDLE clientHandle);
+	
 	/**
 	* returns the number of failed item creates
 	* itemsCreated[x] will be null if could not create and will contain error code in corresponding error entry

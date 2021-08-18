@@ -24,9 +24,9 @@ CTransaction::CTransaction(COPCItem& item, ITransactionComplete* completeCB) :_c
 	_opcData[&item] = std::make_unique<OPCItemData>();
 }
 
-void CTransaction::setItemError(COPCItem *item, HRESULT error){
+void CTransaction::setItemError(COPCItem& item, HRESULT error){
 	
-	_opcData[item] = std::make_unique<OPCItemData>(error);
+	_opcData[&item] = std::make_unique<OPCItemData>(error);
 }
 
 
