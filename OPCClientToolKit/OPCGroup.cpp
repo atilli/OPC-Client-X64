@@ -405,7 +405,7 @@ int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<std::sha
 	for (; i < itemName.size(); i++){
 
 		std::shared_ptr<COPCItem> pOPCItem = std::make_shared<COPCItem>(itemName[i], *this);
-		OPCHANDLE itemHandle = (OPCHANDLE) pOPCItem.get();  // ATI todo will not work in x64 ?? , todo check OPCHANLDE in x64 
+		OPCHANDLE clientItemHandle = pOPCItem->CreateClientHandle(); 
 		
 		USES_CONVERSION;
 		tpm.push_back(new CT2OLE(itemName[i].c_str())) ;
@@ -413,14 +413,14 @@ int COPCGroup::addItems(std::vector<std::string>& itemName, std::vector<std::sha
 		itemDef[i].szItemID = **(tpm.end()-1);
 		itemDef[i].szAccessPath = NULL;//wideName;
 		itemDef[i].bActive = active;
-		itemDef[i].hClient = itemHandle;
+		itemDef[i].hClient = clientItemHandle;
 		itemDef[i].dwBlobSize = 0;
 		itemDef[i].pBlob = NULL;
 		itemDef[i].vtRequestedDataType = VT_EMPTY;
 		
 		itemsCreated[i]= pOPCItem;
 
-		_items[itemHandle] = pOPCItem;
+		_items[clientItemHandle] = pOPCItem;
 	}
 
 	HRESULT *itemResult;

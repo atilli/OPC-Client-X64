@@ -86,7 +86,10 @@ public:
 	const std::string & getName() const{
 		return _name;
 	} 
-
+	OPCHANDLE CreateClientHandle()
+	{
+		return (OPCHANDLE) this; // todo some more sensible fo x64
+	}
 	void getSupportedProperties(std::vector<CPropertyDescription> &desc);
 
 	

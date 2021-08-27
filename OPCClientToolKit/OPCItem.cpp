@@ -40,9 +40,9 @@ COPCItem::~COPCItem()
 
 
 void COPCItem::setOPCParams(OPCHANDLE handle, VARTYPE type, DWORD dwAccess){
-	_serversItemHandle	=handle; 
-	_vtCanonicalDataType	=type; 
-	_dwAccessRights		=dwAccess;
+	_serversItemHandle = handle; 
+	_vtCanonicalDataType = type; 
+	_dwAccessRights = dwAccess;
 }
 
 
@@ -168,7 +168,7 @@ void COPCItem::getSupportedProperties(std::vector<CPropertyDescription> &desc){
 
 
 void COPCItem::getProperties(const std::vector<CPropertyDescription> &propsToRead, ATL::CAutoPtrArray<SPropertyValue> &propsRead){
-	unsigned noProperties = (DWORD)propsToRead.size();
+	DWORD noProperties = (DWORD)propsToRead.size();
 	VARIANT *pValues = NULL;
 	HRESULT *pErrors = NULL;
 	
