@@ -1,8 +1,7 @@
 ## Description
 * An object oriented OPC DA Client SDK/ToolKit written in C++, Both X86/X64 supported, implementing the OPC DA specification version 2.05A
-* New Features (Compare with the original version)
-	* Build with x64 project.
-	* Build with MFC.
+*	* Build with x64 project.
+	* C++ 11
 	* Multithread supported.
 	* Connect to server with CLSID.(Hasn't tested)
 
@@ -10,5 +9,8 @@
 This is a fork from:
 https://github.com/edimetia3d/OPC-Client-X64
 
-and still WIP, still some new/delete's left, but at least some direct handle to pointer mapping removed.
+## TODO status
 
+..still WIP, 
+* Remove all new/delete.
+* Wrap a gRPC service on top of API, so that we have standalone process to be called from multiple languages
